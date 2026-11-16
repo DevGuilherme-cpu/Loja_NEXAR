@@ -1,10 +1,18 @@
 from django.contrib import messages
-from django.http import Http404
-from django.shortcuts import redirect, render
+from django.db.models import Count
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-# shortcut: dados falsos até o Eliton criar os models; ele troca por Produto.objects...
-from .mock_data import CATEGORIAS, PEDIDOS, PRODUTOS
+from .models import Categoria, Pedido, Produto
+
+# select_related("categoria") = JOIN com categorias numa consulta só (o card mostra o nome da categoria)
+PRODUTOS = Produto.objects.select_related("categoria")
+
+
+def filtrar(busca, categoria=""):
+    # SELECT ... WHERE nome LIKE '%busca%' [AND categoria_id = ...]
+    lista = PRODUTOS.filter(nome__icontains=busca)
+    return lista.filter(categoria_id=categoria) if categoria.isdigit() else lista
 
 
 def index(request):
@@ -14,17 +22,12 @@ def index(request):
 def produtos(request):
     busca = request.GET.get("busca", "").strip()
     categoria = request.GET.get("categoria", "")
-    lista = [p for p in PRODUTOS
-             if busca.lower() in p["nome"].lower()
-             and (not categoria or str(p["categoria_id"]) == categoria)]
-    return render(request, "produtos.html", {"produtos": lista, "busca": busca, "categoria": categoria})
+    return render(request, "produtos.html",
+                  {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria})
 
 
 def produto(request, id):
-    p = next((p for p in PRODUTOS if p["id"] == id), None)
-    if p is None:
-        raise Http404("Produto não encontrado")
-    return render(request, "produto.html", {"produto": p})
+    return render(request, "produto.html", {"produto": get_object_or_404(PRODUTOS, id=id)})
 
 
 def entrar(request):
@@ -36,21 +39,16 @@ def cadastro(request):
 
 
 # ---------- painel admin ----------
-# shortcut: as telas só exibem dados falsos e as ações (salvar/excluir) não gravam nada.
-# Eliton: troque pelo CRUD de verdade (INSERT/UPDATE/DELETE) e proteja com @staff_member_required.
+# A LEITURA já vem do banco. shortcut: salvar/excluir ainda não gravam nada.
+# Eliton: fazer o CRUD de verdade (INSERT/UPDATE/DELETE) e proteger com @staff_member_required.
 
 def painel_produtos(request):
     busca = request.GET.get("busca", "").strip()
-    lista = [p for p in PRODUTOS if busca.lower() in p["nome"].lower()]
-    return render(request, "painel/produtos.html", {"produtos": lista, "busca": busca})
+    return render(request, "painel/produtos.html", {"produtos": filtrar(busca), "busca": busca})
 
 
 def painel_produto_form(request, id=None):
-    produto = None
-    if id is not None:
-        produto = next((p for p in PRODUTOS if p["id"] == id), None)
-        if produto is None:
-            raise Http404("Produto não encontrado")
+    produto = get_object_or_404(PRODUTOS, id=id) if id is not None else None
     if request.method == "POST":
         messages.info(request, "Salvar simulado: ainda não grava no banco.")
         return redirect("loja:painel_produtos")
@@ -64,7 +62,8 @@ def painel_produto_excluir(request, id):
 
 
 def painel_categorias(request):
-    lista = [{**c, "total": sum(p["categoria_id"] == c["id"] for p in PRODUTOS)} for c in CATEGORIAS]
+    # SELECT categorias.*, COUNT(produtos.id) ... LEFT JOIN produtos ... GROUP BY categorias.id
+    lista = Categoria.objects.annotate(total=Count("produto"))
     return render(request, "painel/categorias.html", {"lista": lista})
 
 
@@ -81,4 +80,6 @@ def painel_categoria_excluir(request, id):
 
 
 def painel_pedidos(request):
-    return render(request, "painel/pedidos.html", {"pedidos": PEDIDOS})
+    # O JOIN do trabalho: pedidos + auth_user + produtos + categorias numa consulta só
+    pedidos = Pedido.objects.select_related("usuario", "produto__categoria")
+    return render(request, "painel/pedidos.html", {"pedidos": pedidos})

@@ -1,6 +1,6 @@
-# shortcut: lista falsa; Eliton troca por Categoria.objects.all()
-from .mock_data import CATEGORIAS
+from .models import Categoria
 
 
+# Categorias no menu/rodapé de todas as páginas
 def categorias(request):
-    return {"categorias": CATEGORIAS}
+    return {"categorias": Categoria.objects.all()}
