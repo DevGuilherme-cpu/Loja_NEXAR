@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block titulo %}Loja — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="section">
+  <div class="section-head">
+    <h2 data-split>Loja</h2>
+    <span class="contador">{{ produtos|length }} peça{{ produtos|length|pluralize }}</span>
+  </div>
+
+  <div class="filtros">
+    <nav class="chips" aria-label="Categorias">
+      <a class="chip {% if not categoria %}ativo{% endif %}" href="{% url 'loja:produtos' %}{% if busca %}?busca={{ busca|urlencode }}{% endif %}">Tudo</a>
+      {% for c in categorias %}
+        <a class="chip {% if categoria == c.id|stringformat:'s' %}ativo{% endif %}"
+           href="{% url 'loja:produtos' %}?categoria={{ c.id }}{% if busca %}&busca={{ busca|urlencode }}{% endif %}">{{ c.nome }}</a>
+      {% endfor %}
+    </nav>
+
+    <form class="busca" method="get" role="search">
+      {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
+      <input type="search" name="busca" value="{{ busca }}" placeholder="Buscar peça..." aria-label="Buscar peça">
+      <button type="submit">Buscar</button>
+    </form>
+  </div>
+
+  <div class="grid">
+    {% for p in produtos %}
+      {% include "_card.html" %}
+    {% empty %}
+      <p class="vazio">Nada encontrado{% if busca %} para "{{ busca }}"{% endif %}. <a class="link" href="{% url 'loja:produtos' %}">Ver tudo</a></p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

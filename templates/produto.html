@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}{{ produto.nome }} — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="pdp">
+  <div class="pdp-3d">
+    <canvas id="viewer-3d"
+            data-id="{{ produto.id }}"
+            data-categoria="{{ produto.categoria }}"
+            data-modelo="{{ produto.modelo_3d|default:'' }}"
+            aria-label="{{ produto.nome }} em 3D. Arraste para girar."></canvas>
+    <span class="pdp-dica">Arraste para girar · role para aproximar</span>
+  </div>
+
+  <div class="pdp-info">
+    <a class="link" href="{% url 'loja:produtos' %}?categoria={{ produto.categoria_id }}">{{ produto.categoria }}</a>
+    <h1>{{ produto.nome }}</h1>
+    <p class="pdp-preco">R$ {{ produto.preco|floatformat:2 }}</p>
+    <p class="pdp-desc">{{ produto.descricao }}</p>
+
+    {# Eliton: troque action="" pela rota que grava o pedido, ex.: {% url 'loja:pedido' %} #}
+    <form class="pdp-form" method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="produto_id" value="{{ produto.id }}">
+      <fieldset class="tamanhos">
+        <legend>Tamanho</legend>
+        <label><input type="radio" name="tamanho" value="P" required><span>P</span></label>
+        <label><input type="radio" name="tamanho" value="M"><span>M</span></label>
+        <label><input type="radio" name="tamanho" value="G"><span>G</span></label>
+        <label><input type="radio" name="tamanho" value="GG"><span>GG</span></label>
+      </fieldset>
+      <label class="qtd">Quantidade
+        <input type="number" name="quantidade" value="1" min="1" max="{{ produto.estoque }}">
+      </label>
+      {% if produto.estoque %}
+        <button class="btn" type="submit">Comprar →</button>
+        {% if produto.estoque <= 3 %}<p class="pdp-estoque">Só {{ produto.estoque }} em estoque</p>{% endif %}
+      {% else %}
+        <button class="btn" type="submit" disabled>Esgotado</button>
+      {% endif %}
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{% static 'js/viewer.js' %}"></script>
+{% endblock %}

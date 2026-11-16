@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Criar conta — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="auth">
+  <div class="pdp-3d">
+    <canvas id="viewer-3d" data-id="1" data-categoria="Camisetas" aria-label="Camiseta NEXAR em 3D"></canvas>
+  </div>
+
+  {# Campos com os nomes do UserCreationForm do Django (username, password1, password2) + email #}
+  <form class="auth-form" method="post">
+    {% csrf_token %}
+    <h1 data-split>Cadastro</h1>
+    {% if form.errors %}
+      <div class="erro" role="alert">
+        {% for erros in form.errors.values %}{% for e in erros %}<p>{{ e }}</p>{% endfor %}{% endfor %}
+      </div>
+    {% endif %}
+    <label class="campo">Usuário
+      <input type="text" name="username" value="{{ form.username.value|default:'' }}" autocomplete="username" required>
+    </label>
+    <label class="campo">E-mail
+      <input type="email" name="email" value="{{ form.email.value|default:'' }}" autocomplete="email" required>
+    </label>
+    <label class="campo">Senha
+      <input type="password" name="password1" autocomplete="new-password" minlength="8" required>
+    </label>
+    <label class="campo">Confirmar senha
+      <input type="password" name="password2" autocomplete="new-password" minlength="8" required>
+    </label>
+    <button class="btn" type="submit">Criar conta →</button>
+    <p class="auth-troca">Já tem conta? <a href="{% url 'loja:entrar' %}">Entrar</a></p>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{% static 'js/viewer.js' %}"></script>
+{% endblock %}

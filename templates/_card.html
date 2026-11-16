@@ -1,0 +1,18 @@
+<a class="card" href="{% url 'loja:produto' p.id %}" data-reveal>
+  <div class="card-img">
+    {% if p.imagem %}
+      <img src="{{ p.imagem.url }}" alt="{{ p.nome }}" loading="lazy">
+      {% if p.imagem_2 %}<img class="card-img-2" src="{{ p.imagem_2.url }}" alt="" loading="lazy">{% endif %}
+    {% else %}
+      {# sem foto: o thumbs.js desenha a frente e as costas da peça em 3D aqui #}
+      <img data-thumb data-id="{{ p.id }}" data-categoria="{{ p.categoria }}" data-modelo="{{ p.modelo_3d|default:'' }}" alt="{{ p.nome }}">
+      <img class="card-img-2" alt="">
+    {% endif %}
+    <span class="card-tag">{{ p.categoria }}</span>
+    {% if p.estoque <= 3 %}<span class="card-tag card-tag-hot">Últimas</span>{% endif %}
+  </div>
+  <div class="card-info">
+    <span>{{ p.nome }}</span>
+    <span>R$ {{ p.preco|floatformat:2 }}</span>
+  </div>
+</a>

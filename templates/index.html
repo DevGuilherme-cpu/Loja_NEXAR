@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block conteudo %}
+<section class="hero">
+  <div class="hero-meta">
+    <span>Drop 01<br>Inverno 26</span>
+    <a class="btn" href="{% url 'loja:produtos' %}">Ver a loja →</a>
+  </div>
+  <canvas id="hero-3d" aria-label="Peças NEXAR girando em 3D"></canvas>
+  <h1 class="hero-title" data-split>NEXAR</h1>
+</section>
+
+<section class="section">
+  <p class="manifesto" data-words>Roupa pra quem anda na rua e vive na tela. Gire, aproxime e veja cada peça em 3D antes de comprar.</p>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Destaques</h2>
+    <a class="link" href="{% url 'loja:produtos' %}">Ver tudo</a>
+  </div>
+  <div class="grid">
+    {% for p in destaques %}{% include "_card.html" %}{% endfor %}
+  </div>
+</section>
+
+<section class="section cats">
+  {% for c in categorias %}
+    <a href="{% url 'loja:produtos' %}?categoria={{ c.id }}" data-reveal>{{ c.nome }} <span>→</span></a>
+  {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{% static 'js/hero.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "painel/base_painel.html" %}
+
+{% block titulo %}Pedidos — Painel NEXAR{% endblock %}
+
+{% block painel %}
+<div class="painel-topo">
+  <h1>Pedidos</h1>
+  <span class="contador">{{ pedidos|length }} pedido{{ pedidos|length|pluralize }}</span>
+</div>
+
+{# Esta tabela é o resultado do JOIN pedidos + usuarios + produtos + categorias #}
+<div class="tabela-wrap">
+  <table class="tabela">
+    <thead>
+      <tr><th>#</th><th>Data</th><th>Cliente</th><th>Produto</th><th>Categoria</th><th>Tam.</th><th class="num">Qtd.</th><th class="num">Total</th></tr>
+    </thead>
+    <tbody>
+      {% for p in pedidos %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>{{ p.data|date:"d/m/Y H:i" }}</td>
+          <td>{{ p.cliente }}</td>
+          <td>{{ p.produto }}</td>
+          <td>{{ p.categoria }}</td>
+          <td>{{ p.tamanho }}</td>
+          <td class="num">{{ p.quantidade }}</td>
+          <td class="num">R$ {{ p.total|floatformat:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8">Nenhum pedido ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

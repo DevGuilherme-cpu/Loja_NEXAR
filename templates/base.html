@@ -1,0 +1,64 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}NEXAR{% endblock %}</title>
+  <script>document.documentElement.classList.add('js')</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <script type="importmap">
+    {"imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }}
+  </script>
+</head>
+<body>
+  <div class="curtain" aria-hidden="true"><span>NEXAR</span></div>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>DROP 01 — INVERNO 26 — FRETE GRÁTIS ACIMA DE R$300 — VEJA AS PEÇAS EM 3D — NEXAR — </span>
+      <span>DROP 01 — INVERNO 26 — FRETE GRÁTIS ACIMA DE R$300 — VEJA AS PEÇAS EM 3D — NEXAR — </span>
+    </div>
+  </div>
+
+  <header class="header">
+    <nav class="nav nav-left">
+      <a href="{% url 'loja:produtos' %}">Loja</a>
+      <a href="{% url 'loja:produtos' %}?categoria=2">Moletons</a>
+    </nav>
+    <a class="logo" href="{% url 'loja:index' %}">NEXAR</a>
+    <nav class="nav nav-right">
+      <a href="{% url 'loja:entrar' %}">Entrar</a>
+      <a href="{% url 'loja:produtos' %}">Buscar</a>
+    </nav>
+  </header>
+
+  <main>{% block conteudo %}{% endblock %}</main>
+
+  <footer class="footer">
+    <div class="footer-logo">NEXAR</div>
+    <div class="footer-cols">
+      <div>
+        <b>Loja</b>
+        <a href="{% url 'loja:produtos' %}">Tudo</a>
+        {% for c in categorias %}<a href="{% url 'loja:produtos' %}?categoria={{ c.id }}">{{ c.nome }}</a>{% endfor %}
+      </div>
+      <div><b>Conta</b><a href="{% url 'loja:entrar' %}">Entrar</a><a href="{% url 'loja:cadastro' %}">Criar conta</a><a href="{% url 'loja:painel_produtos' %}">Painel</a></div>
+      <div><b>NEXAR</b><span>Projeto acadêmico 2026</span><span>Guilherme &amp; Eliton</span></div>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="{% static 'js/main.js' %}"></script>
+  <script type="module" src="{% static 'js/thumbs.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
