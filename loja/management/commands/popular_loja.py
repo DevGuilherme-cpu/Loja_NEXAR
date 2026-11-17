@@ -49,7 +49,9 @@ class Command(BaseCommand):
         for ped in PEDIDOS:
             # clientes de exemplo, sem senha (não conseguem entrar); o admin se cria com createsuperuser
             cliente, _ = User.objects.get_or_create(username=ped["cliente"])
-            pedido = Pedido.objects.create(usuario=cliente, produto=produtos[ped["produto"]],
+            produto = produtos[ped["produto"]]
+            # preco_unitario guarda o preço do dia da compra (não muda se o produto for reajustado)
+            pedido = Pedido.objects.create(usuario=cliente, produto=produto, preco_unitario=produto.preco,
                                            tamanho=ped["tamanho"], quantidade=ped["quantidade"])
             # a data é automática (auto_now_add); aqui voltamos para a data do exemplo
             Pedido.objects.filter(pk=pedido.pk).update(data=timezone.make_aware(ped["data"]))
