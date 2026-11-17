@@ -187,7 +187,7 @@ do código (inofensivo para leitura; ver seção 8 para reverter).
 
 Pré-requisito local (sem efeito remoto) — **cumprido** na `backend-base` revisada: 0004 final, 0005 e
 `DB_SSLMODE` commitados; `main` integrada até `e43f96f`; suíte verde em SQLite e em PostgreSQL 17 descartável;
-`makemigrations --check` sem mudanças. Pendente: validação em MySQL (credencial local).
+`makemigrations --check` sem mudanças; validado também em MySQL 8.0.46 local (ver `docs/validacao_banco.md`).
 
 Ordem de execução: **1 → 2 → 3 → 4 → 5 → 6 → 7** (as letras só identificam cada ação).
 
@@ -272,4 +272,4 @@ Staff:
 - O `migrate` foi testado em **PostgreSQL 17.11 local descartável** (do zero, upgrade 0003→0005 com dados,
   bloqueios da 0004/0005, reverse da 0005 e suíte completa) — ver `docs/validacao_banco.md`. Não foi testado
   contra o pooler do Supabase; por isso a recomendação de Session pooler/conexão direta no passo E.
-- Não validado em MySQL (falta credencial local); roteiro em `docs/validacao_mysql.ps1`.
+- Validado em MySQL 8.0.46 local (do zero, upgrade com dados, bloqueios, suíte e `banco.sql`).

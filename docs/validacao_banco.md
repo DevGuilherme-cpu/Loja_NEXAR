@@ -235,3 +235,42 @@ Ambiente: container descartável `postgres:17-alpine` (`nexar-pg-coord`, 127.0.0
 | `manage.py test loja --noinput` | **Ran 57 tests — OK** |
 
 O container foi parado (`--rm`). Nenhum banco remoto foi acessado.
+
+---
+
+## MySQL 8.0.46 local — 17/11/2026 (executado pelo coordenador)
+
+Servidor: serviço Windows `MySQL80`, porta **3306** nesta máquina (a porta muda por máquina: 3307 na do
+Guilherme — cada um ajusta o próprio `.env`). Credencial lida do `.env` local, nunca exibida.
+Bancos usados: `nexar_zero_teste`, `nexar_migracao_teste`, `test_nexar_suite` (criado e destruído pelo
+Django) e `nexar_script`; todos conferidos como inexistentes antes de criar. Nenhum outro banco do servidor
+foi lido ou alterado.
+
+### Bug encontrado e corrigido na 0005
+`migrate` do zero parou na 0005 com
+`TransactionManagementError: Executing DDL statements while in a transaction on databases that can't perform a rollback is prohibited.`
+Causa: o `CREATE INDEX` rodava dentro de `RunPython`, que no MySQL é envolvido em `transaction.atomic`
+(DDL não é transacional no MySQL). Correção: a 0005 agora tem duas operações — verificação de duplicados
+(somente leitura) e `RunPython(criar_indice, remover_indice, atomic=False)`. O schema final é o mesmo em
+SQLite/PostgreSQL; a 0005 ainda não tinha sido aplicada em nenhum banco compartilhado.
+
+### Resultados
+| Teste | Resultado |
+|---|---|
+| `migrate` do zero (`nexar_zero_teste`) + `popular_loja` | OK — 5 categorias, 9 produtos, 5 usuários, 5 pedidos; 0001–0005 aplicadas |
+| CHECKs | `produto_preco_nao_negativo`, `pedido_quantidade_minima_1`, `pedido_preco_unitario_nao_negativo` (+ as de `PositiveIntegerField`) |
+| Índice de e-mail | `auth_user_email_ci_uniq` = `nullif(lower(trim(email)),'')`; `' A@X.com '` após `a@x.com` → erro 1062; dois `''` aceitos |
+| Reverse/reaplicação da 0005 | índice removido (0) e recriado (1) |
+| Upgrade 0003 → 0004 com preço −5 e quantidade 0 | parou **antes de qualquer DDL** com a mensagem (ids 2 e 2); coluna `preco_unitario` ausente; 0004 não registrada |
+| Após corrigir manualmente | 0004 aplicada; pedidos com `preco_unitario` = preço **atual** (179,90, não o 149,90 da compra); NOT NULL |
+| 0005 com `Dup@x.com` e `dup@x.com ` | `EmailsDuplicados` com e-mail mascarado; índice ausente; contas intactas |
+| Após corrigir manualmente | 0005 aplicada |
+| `manage.py test loja` (`test_nexar_suite`) | **Ran 57 tests — OK** |
+| `docs/banco.sql` via `mysql.exe` | exit 0; SELECT LIKE (2 moletons), JOIN de 4 tabelas, UPDATE (pedido 5 mantém 449,70), DELETE do produto 6 |
+| Casos comentados do `banco.sql` em `nexar_script` | DELETE de produto com pedido → 1451; pedido com quantidade 0 → 3819; e-mail repetido em outra caixa → 1062 |
+| Banco da aplicação `nexar` (criado em seguida) | `migrate` 0001–0005 + `popular_loja`; site local respondeu 200 em `/`, `/produtos/`, busca, `/produto/3/`, `/entrar/`, `/cadastro/`; `/painel/` → `/entrar/` |
+
+Revalidação após a correção da 0005: SQLite **57 OK** e PostgreSQL 17.11 descartável **57 OK** (índice idêntico).
+
+Bancos de teste que ficaram no servidor: `nexar_zero_teste`, `nexar_migracao_teste` (podem ser apagados) e
+`nexar_script` (demonstração do script SQL).

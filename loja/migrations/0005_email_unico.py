@@ -54,7 +54,6 @@ def _tabela(apps, schema_editor):
 
 
 def criar_indice(apps, schema_editor):
-    verificar_duplicados(apps, schema_editor)
     # Parênteses duplos: exigência do MySQL para índice funcional (aceito também por SQLite/PostgreSQL)
     schema_editor.execute(
         f"CREATE UNIQUE INDEX {schema_editor.quote_name(INDICE)} "
@@ -78,5 +77,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(criar_indice, remover_indice),
+        # 1) verificação somente leitura (aborta antes de qualquer DDL se houver duplicados)
+        migrations.RunPython(verificar_duplicados, migrations.RunPython.noop),
+        # 2) o índice. atomic=False: no MySQL o DDL não é transacional e o Django recusa
+        #    executar DDL dentro de transaction.atomic (TransactionManagementError).
+        #    No PostgreSQL/SQLite a migration inteira continua numa transação.
+        migrations.RunPython(criar_indice, remover_indice, atomic=False),
     ]

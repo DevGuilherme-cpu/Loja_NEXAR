@@ -7,10 +7,12 @@
 --   "python manage.py migrate" e os dados por "python manage.py popular_loja".
 -- * A tabela auth_user aqui é SIMPLIFICADA: no projeto ela é criada pelo app
 --   django.contrib.auth, junto com auth_group, auth_permission, sessões etc.
--- * Ainda NÃO foi executado num servidor MySQL real (o roteiro de validação
---   está em docs/validacao_mysql.ps1). Está alinhado às migrations
---   loja.0001 a loja.0005 (cor do produto, preco_unitario, CHECKs e e-mail
---   único sem diferenciar maiúsculas/minúsculas).
+-- * Executado em MySQL 8.0.46 em 17/11/2026 com o cliente mysql.exe (exit 0):
+--   todas as instruções rodaram; os casos comentados no fim também foram
+--   testados (FK = erro 1451, CHECK = erro 3819). Detalhes em
+--   docs/validacao_banco.md. Está alinhado às migrations loja.0001 a loja.0005
+--   (cor do produto, preco_unitario, CHECKs e e-mail único sem diferenciar
+--   maiúsculas/minúsculas nem espaços).
 -- * O índice funcional de e-mail exige MySQL 8.0.13 ou mais novo.
 --
 -- Este arquivo existe para a avaliação: mostra a estrutura (PK, FK, tipos)
