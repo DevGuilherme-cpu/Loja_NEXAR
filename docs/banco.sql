@@ -12,9 +12,11 @@
 -- para a avaliação: mostra a estrutura (PK, FK, tipos) e consultas de exemplo.
 -- =====================================================================
 
-DROP DATABASE IF EXISTS nexar;
-CREATE DATABASE nexar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE nexar;
+-- Banco separado (nexar_script) de propósito: o banco "nexar" é o que o Django
+-- usa (DB_NAME no .env). Rodar este script não apaga nem altera o banco da aplicação.
+-- Para recriar a demonstração do zero: DROP DATABASE nexar_script; e rode de novo.
+CREATE DATABASE nexar_script CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE nexar_script;
 
 -- ---------------------------------------------------------------------
 -- auth_user (versão simplificada, com as colunas reais do Django)
