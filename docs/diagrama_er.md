@@ -20,6 +20,7 @@ erDiagram
         VARCHAR imagem "100"
         VARCHAR imagem_2 "100"
         VARCHAR modelo_3d "255"
+        VARCHAR cor "7 - ex.: #1F2F6B"
         BIGINT categoria_id FK
     }
 
@@ -27,7 +28,7 @@ erDiagram
         INT id PK
         VARCHAR username UK "150"
         VARCHAR password "128"
-        VARCHAR email "254"
+        VARCHAR email "254 - único sem caixa (se preenchido)"
         TINYINT is_staff
         TINYINT is_active
         DATETIME date_joined
@@ -45,6 +46,9 @@ erDiagram
 ```
 
 `auth_user` é a tabela de usuários do próprio Django (aqui aparecem só as colunas principais).
+O e-mail, quando preenchido, é único sem diferenciar maiúsculas/minúsculas (índice
+`auth_user_email_ci_uniq` sobre `NULLIF(LOWER(email), '')`, migration `loja.0005`).
+`produtos.cor` guarda a cor da peça usada no visualizador 3D (migration `loja.0002`).
 
 **Relacionamentos.** Uma categoria tem vários produtos e cada produto pertence a exatamente uma
 categoria (`produtos.categoria_id`). Um cliente (`auth_user`) faz vários pedidos, e um produto

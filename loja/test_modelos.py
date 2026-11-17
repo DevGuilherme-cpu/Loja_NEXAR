@@ -98,6 +98,72 @@ class MigracaoPrecoUnitarioTest(TransactionTestCase):
         self.assertEqual(pedido.preco_unitario, Decimal("129.90"))
 
 
+class MigracaoBloqueiaDadosInvalidosTest(TransactionTestCase):
+    """A 0004 não corrige dados: com quantidade 0 ou preço negativo ela aborta e desfaz tudo."""
+
+    antes = [("loja", "0003_cores_e_modelos_locais")]
+    depois = [("loja", "0004_pedido_preco_unitario")]
+
+    def tearDown(self):
+        # remove os dados inválidos (senão a própria 0004 barra a volta ao estado final)
+        with connection.cursor() as cursor:
+            for tabela in ("pedidos", "produtos", "categorias", "auth_user"):
+                cursor.execute(f"DELETE FROM {connection.ops.quote_name(tabela)}")
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def _preparar_0003(self, quantidade=1, preco=Decimal("50.00")):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.antes)
+        apps_antigos = executor.loader.project_state(self.antes).apps
+        usuario = apps_antigos.get_model("auth", "User").objects.create(username="legado")
+        categoria = apps_antigos.get_model("loja", "Categoria").objects.create(nome="Legado")
+        produto = apps_antigos.get_model("loja", "Produto").objects.create(
+            nome="Antigo", preco=preco, categoria=categoria)
+        pedido = apps_antigos.get_model("loja", "Pedido").objects.create(
+            usuario=usuario, produto=produto, tamanho="M", quantidade=quantidade)
+        return produto.pk, pedido.pk
+
+    def _migrar_espera_erro(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        with self.assertRaises(RuntimeError) as ctx:
+            executor.migrate(self.depois)
+        return str(ctx.exception)
+
+    def _colunas_pedidos(self):
+        with connection.cursor() as cursor:
+            return [c.name for c in connection.introspection.get_table_description(cursor, "pedidos")]
+
+    def _assert_continua_na_0003(self):
+        executor = MigrationExecutor(connection)
+        self.assertNotIn(self.depois[0], executor.loader.applied_migrations)
+        self.assertIn(self.antes[0], executor.loader.applied_migrations)
+        self.assertNotIn("preco_unitario", self._colunas_pedidos())
+
+    def test_quantidade_zero_bloqueia_migracao(self):
+        _, pedido_id = self._preparar_0003(quantidade=0)
+        mensagem = self._migrar_espera_erro()
+        self.assertIn("1 pedido(s) com quantidade menor que 1", mensagem)
+        self.assertIn(f"ids: {pedido_id}", mensagem)
+        self.assertIn("Corrija", mensagem)
+        self._assert_continua_na_0003()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT quantidade FROM pedidos WHERE id = %s", [pedido_id])
+            self.assertEqual(cursor.fetchone()[0], 0)  # nada foi corrigido sozinho
+
+    def test_preco_negativo_bloqueia_migracao(self):
+        produto_id, _ = self._preparar_0003(preco=Decimal("-10.00"))
+        mensagem = self._migrar_espera_erro()
+        self.assertIn("1 produto(s) com preço negativo", mensagem)
+        self.assertIn(f"ids: {produto_id}", mensagem)
+        self._assert_continua_na_0003()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT preco FROM produtos WHERE id = %s", [produto_id])
+            self.assertEqual(Decimal(str(cursor.fetchone()[0])), Decimal("-10.00"))
+
+
 class PrecoAutomaticoTest(TestCase):
     """Pedido criado sem preco_unitario (ex.: pelo /admin/) copia o preço do produto."""
 

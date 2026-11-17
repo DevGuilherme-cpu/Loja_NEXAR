@@ -1,20 +1,26 @@
 -- =====================================================================
 -- NEXAR - script do banco de dados (MySQL 8)
 -- =====================================================================
--- ATENÇÃO: este script NÃO foi executado num servidor MySQL real.
--- O DDL das tabelas do app foi gerado pelo próprio Django (backend MySQL,
--- migrations loja.0001 e loja.0002, sem conexão com servidor) e ajustado à
--- mão para rodar do zero no MySQL Workbench (FKs e CHECKs dentro do CREATE).
--- Revise/execute no Workbench antes da entrega.
+-- ATENÇÃO:
+-- * Arquivo DEMONSTRATIVO. NÃO substitui as migrations do Django e NÃO é um
+--   backup completo do banco. No projeto real as tabelas são criadas por
+--   "python manage.py migrate" e os dados por "python manage.py popular_loja".
+-- * A tabela auth_user aqui é SIMPLIFICADA: no projeto ela é criada pelo app
+--   django.contrib.auth, junto com auth_group, auth_permission, sessões etc.
+-- * Ainda NÃO foi executado num servidor MySQL real (o roteiro de validação
+--   está em docs/validacao_mysql.ps1). Está alinhado às migrations
+--   loja.0001 a loja.0005 (cor do produto, preco_unitario, CHECKs e e-mail
+--   único sem diferenciar maiúsculas/minúsculas).
+-- * O índice funcional de e-mail exige MySQL 8.0.13 ou mais novo.
 --
--- No projeto real as tabelas são criadas por "python manage.py migrate" e os
--- dados de exemplo por "python manage.py popular_loja". Este arquivo existe
--- para a avaliação: mostra a estrutura (PK, FK, tipos) e consultas de exemplo.
+-- Este arquivo existe para a avaliação: mostra a estrutura (PK, FK, tipos)
+-- e consultas de exemplo.
 -- =====================================================================
 
 -- Banco separado (nexar_script) de propósito: o banco "nexar" é o que o Django
 -- usa (DB_NAME no .env). Rodar este script não apaga nem altera o banco da aplicação.
--- Para recriar a demonstração do zero: DROP DATABASE nexar_script; e rode de novo.
+-- O script não apaga nenhum banco. Se nexar_script já existir, o CREATE abaixo
+-- falha e nada é alterado; para recriar, apague nexar_script manualmente antes.
 CREATE DATABASE nexar_script CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE nexar_script;
 
@@ -39,6 +45,10 @@ CREATE TABLE auth_user (
     UNIQUE KEY auth_user_username_uniq (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- E-mail único ignorando maiúsculas/minúsculas (migration loja.0005).
+-- E-mail vazio vira NULL no índice, e NULLs não conflitam: contas sem e-mail continuam permitidas.
+CREATE UNIQUE INDEX auth_user_email_ci_uniq ON auth_user ((NULLIF(LOWER(email), '')));
+
 -- ---------------------------------------------------------------------
 -- categorias (model Categoria)
 -- ---------------------------------------------------------------------
@@ -62,6 +72,7 @@ CREATE TABLE produtos (
     imagem       VARCHAR(100)  NOT NULL,
     imagem_2     VARCHAR(100)  NOT NULL,
     modelo_3d    VARCHAR(255)  NOT NULL,
+    cor          VARCHAR(7)    NOT NULL DEFAULT '',  -- cor da peça 3D, ex.: #1F2F6B (migration 0002)
     categoria_id BIGINT        NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT produtos_estoque_check CHECK (estoque >= 0),
@@ -107,27 +118,26 @@ INSERT INTO categorias (id, nome) VALUES
     (4, 'Bonés'),
     (5, 'Acessórios');
 
-INSERT INTO produtos (id, nome, descricao, preco, estoque, imagem, imagem_2, modelo_3d, categoria_id) VALUES
+INSERT INTO produtos (id, nome, descricao, preco, estoque, imagem, imagem_2, modelo_3d, cor, categoria_id) VALUES
     (1, 'Camiseta Box Logo', 'Algodão 240g, modelagem boxy, logo NEXAR bordado no peito.', 149.90, 12,
-        'produtos/camiseta-box-1.jpg', 'produtos/camiseta-box-2.jpg', '', 1),
+        'produtos/camiseta-box-1.jpg', 'produtos/camiseta-box-2.jpg', '', '#E8641E', 1),
     (2, 'Camiseta Grid', 'Estampa grid em silk, gola canelada reforçada.', 159.90, 12,
-        'produtos/camiseta-grid-1.jpg', 'produtos/camiseta-grid-2.jpg', '', 1),
+        'produtos/camiseta-grid-1.jpg', 'produtos/camiseta-grid-2.jpg', '', '#F2F2EF', 1),
     (3, 'Moletom Heavy', 'Moletom 480g peluciado, ombro caído, punho largo.', 399.90, 12,
-        'produtos/moletom-heavy-1.jpg', 'produtos/moletom-heavy-2.jpg', '', 2),
+        'produtos/moletom-heavy-1.jpg', 'produtos/moletom-heavy-2.jpg', '', '#22306B', 2),
     (4, 'Moletom Drop 01', 'Edição limitada do primeiro drop. Bordado 3D nas costas.', 429.90, 3,
-        'produtos/moletom-drop-1.jpg', 'produtos/moletom-drop-2.jpg', '', 2),
+        'produtos/moletom-drop-1.jpg', 'produtos/moletom-drop-2.jpg', '', '#EDEDE9', 2),
     (5, 'Calça Cargo Tech', 'Ripstop com seis bolsos e barra ajustável.', 349.90, 12,
-        'produtos/calca-cargo-1.jpg', 'produtos/calca-cargo-2.jpg', '', 3),
+        'produtos/calca-cargo-1.jpg', 'produtos/calca-cargo-2.jpg', '', '#5B6542', 3),
     (6, 'Calça Wide Denim', 'Jeans 14oz, corte wide, lavagem escura.', 389.90, 12,
-        'produtos/calca-wide-1.jpg', 'produtos/calca-wide-2.jpg', '', 3),
+        'produtos/calca-wide-1.jpg', 'produtos/calca-wide-2.jpg', '', '#8FB3D9', 3),
     (7, 'Boné 6-Panel', 'Sarja de algodão, aba curva, fecho de metal.', 129.90, 12,
-        'produtos/bone-1.jpg', 'produtos/bone-2.jpg', '', 4),
+        'produtos/bone-1.jpg', 'produtos/bone-2.jpg', '', '#F4F4F1', 4),
+    -- modelos 3D servidos pelo próprio site (static/modelos), como na migration 0003
     (8, 'Tênis Runner X', 'Cabedal em mesh e camurça, solado de borracha.', 699.90, 12,
-        'produtos/tenis-1.jpg', 'produtos/tenis-2.jpg',
-        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb', 5),
+        'produtos/tenis-1.jpg', 'produtos/tenis-2.jpg', '/static/modelos/tenis.glb', '', 5),
     (9, 'Óculos Nexar Shade', 'Armação acetato, lente com proteção UV400.', 259.90, 12,
-        'produtos/oculos-1.jpg', 'produtos/oculos-2.jpg',
-        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SunglassesKhronos/glTF-Binary/SunglassesKhronos.glb', 5);
+        'produtos/oculos-1.jpg', 'produtos/oculos-2.jpg', '/static/modelos/oculos.glb', '', 5);
 
 -- Clientes de exemplo. password = '!' é o marcador do Django para "senha
 -- inutilizável": esses usuários não conseguem fazer login (nenhuma senha real aqui).
