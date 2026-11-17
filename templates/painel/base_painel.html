@@ -1,7 +1,5 @@
 {% extends "base.html" %}
 
-{% block mensagens %}{% endblock %}{# o painel mostra as mensagens dentro de .painel-conteudo #}
-
 {% block conteudo %}
 {% with rota=request.resolver_match.url_name %}
 <section class="painel">
@@ -10,11 +8,10 @@
     <a href="{% url 'loja:painel_produtos' %}" {% if 'produto' in rota %}class="ativo" aria-current="page"{% endif %}>Produtos</a>
     <a href="{% url 'loja:painel_categorias' %}" {% if 'categoria' in rota %}class="ativo" aria-current="page"{% endif %}>Categorias</a>
     <a href="{% url 'loja:painel_pedidos' %}" {% if 'pedido' in rota %}class="ativo" aria-current="page"{% endif %}>Pedidos</a>
-    <a href="{% url 'loja:index' %}">← Ver a loja</a>
+    <a href="{% url 'loja:index' %}">Ver a loja</a>
   </nav>
 
   <div class="painel-conteudo">
-    {% for m in messages %}<p class="msg {{ m.tags }}" role="status">{{ m }}</p>{% endfor %}
     {% block painel %}{% endblock %}
   </div>
 </section>

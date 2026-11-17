@@ -6,7 +6,7 @@
 {% block painel %}
 <div class="painel-topo">
   <h1>{% if produto %}Editar produto{% else %}Novo produto{% endif %}</h1>
-  <a class="link" href="{% url 'loja:painel_produtos' %}">← Voltar</a>
+  <a class="link" href="{% url 'loja:painel_produtos' %}">Voltar para produtos</a>
 </div>
 
 {% if form.errors %}
@@ -39,9 +39,17 @@
     <label class="campo largo">Descrição
       <textarea name="descricao" rows="4">{{ produto.descricao|default:'' }}</textarea>
     </label>
+    <label class="campo">Cor da peça
+      <input type="color" name="cor" value="{{ produto.cor|default:'#22306B' }}">
+      <small>Muda a cor do 3D na prévia ao lado.</small>
+    </label>
     <label class="campo">Foto
       <input type="file" name="imagem" accept="image/*">
       <small>Opcional. Sem foto, o site desenha a peça em 3D.</small>
+    </label>
+    <label class="campo">Foto vestindo
+      <input type="file" name="imagem_2" accept="image/*">
+      <small>Opcional. Aparece quando o mouse passa no card.</small>
     </label>
     <label class="campo">Modelo 3D (.glb)
       <input type="file" name="modelo_3d" accept=".glb,model/gltf-binary">
@@ -54,7 +62,7 @@
 
   <aside class="form-preview">
     <div class="pdp-3d">
-      <canvas id="viewer-3d"
+      <canvas id="viewer-3d" role="img" data-lenis-prevent data-cor="{{ produto.cor }}" data-media="{% get_media_prefix %}"
               data-id="{{ produto.id|default:0 }}"
               data-categoria="{{ produto.categoria|default:'' }}"
               data-modelo="{{ produto.modelo_3d|default:'' }}"

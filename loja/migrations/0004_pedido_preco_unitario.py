@@ -21,7 +21,7 @@ def preencher_preco_unitario(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("loja", "0001_initial"),
+        ("loja", "0003_cores_e_modelos_locais"),
     ]
 
     operations = [

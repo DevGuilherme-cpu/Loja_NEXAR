@@ -6,7 +6,10 @@ from .models import Categoria, Pedido, Produto
 
 
 class LojaTest(TestCase):
-    """Rodar com: python manage.py test loja"""
+    """Rodar com: python manage.py test loja
+
+    Os ids vêm do banco (nunca fixos): no MySQL/PostgreSQL o auto-increment não volta a 1 entre testes.
+    """
 
     @classmethod
     def setUpTestData(cls):
@@ -21,16 +24,25 @@ class LojaTest(TestCase):
         self.client.force_login(User.objects.create_user("equipe", password="x", is_staff=True))
 
     def test_paginas_abrem(self):
-        # id real do banco (no MySQL/Postgres o auto-increment não volta a 1 entre testes)
         primeiro = Produto.objects.first().id
         for url in ["/", "/produtos/", f"/produto/{primeiro}/", "/entrar/", "/cadastro/"]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
         self.assertEqual(self.client.get("/produto/999999/").status_code, 404)
-        for url in ["/painel/", "/painel/categorias/", "/painel/pedidos/"]:
+
+    def test_painel_so_para_admin(self):
+        primeiro = Produto.objects.first().id
+        urls = ["/painel/", "/painel/categorias/", "/painel/pedidos/", f"/painel/produtos/{primeiro}/editar/"]
+        for url in urls:
             self.assertEqual(self.client.get(url).status_code, 302, url)  # visitante vai para o login
         self.entrar_como_staff()
-        for url in ["/painel/", "/painel/categorias/", "/painel/pedidos/"]:
+        for url in urls:
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_3d_recebe_cor_do_produto(self):
+        moletom = Produto.objects.get(nome="Moletom Heavy")
+        html = self.client.get(f"/produto/{moletom.id}/").content.decode()
+        self.assertIn('data-cor="#22306B"', html)
+        self.assertIn(f"view-transition-name: produto-{moletom.id}", html)
 
     def test_busca_e_filtro(self):
         r = self.client.get("/produtos/", {"busca": "moletom"})
@@ -46,4 +58,4 @@ class LojaTest(TestCase):
         self.entrar_como_staff()
         html = self.client.get("/painel/pedidos/").content.decode()
         self.assertIn("ana.souza", html)
-        self.assertIn("R$ 449,70", html)  # 3 x 149,90 calculado pelo total do model
+        self.assertIn("R$ 449,70", html)  # 3 x 149,90 gravado em preco_unitario

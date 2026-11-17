@@ -12,7 +12,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from loja.mock_data import CATEGORIAS, PEDIDOS, PRODUTOS
+from loja.mock_data import CATEGORIAS, CORES, PEDIDOS, PRODUTOS
 from loja.models import Categoria, Pedido, Produto
 
 
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             produtos[p["nome"]] = Produto.objects.create(
                 nome=p["nome"], descricao=p["descricao"], preco=Decimal(str(p["preco"])),
                 estoque=p["estoque"], categoria=categorias[p["categoria_id"]],
-                modelo_3d=p["modelo_3d"] or "", **fotos,
+                modelo_3d=p["modelo_3d"] or "", cor=CORES.get(p["nome"], ""), **fotos,
             )
 
         for ped in PEDIDOS:

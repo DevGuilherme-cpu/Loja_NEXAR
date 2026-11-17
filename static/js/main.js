@@ -1,74 +1,68 @@
-// Animações globais: cortina entre páginas, rolagem suave e elementos que aparecem ao rolar.
+// Movimento global. Regra da casa: só o hero anima sozinho; o resto responde ao que a pessoa faz.
+// A troca entre páginas é feita pelo navegador (View Transitions no style.css).
 (() => {
-    const curtain = document.querySelector('.curtain');
-    const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  
-    // Se o GSAP não carregou (sem internet) ou o usuário pediu menos movimento: tira a cortina e não anima.
-    if (!window.gsap || reduzir) { curtain.remove(); return; }
-    gsap.registerPlugin(ScrollTrigger);
-  
-    // ---------- rolagem suave ----------
-    if (window.Lenis) {
-      const lenis = new Lenis({ lerp: 0.1 });
-      lenis.on('scroll', ScrollTrigger.update);
-      gsap.ticker.add(t => lenis.raf(t * 1000));
-      gsap.ticker.lagSmoothing(0);
-    }
-  
-    // ---------- cortina sai ao abrir a página ----------
-    gsap.to(curtain, { yPercent: -100, duration: 0.9, ease: 'expo.inOut', delay: 0.15 });
-  
-    // ---------- cortina entra antes de trocar de página ----------
-    document.addEventListener('click', e => {
-      const a = e.target.closest('a');
-      if (!a || a.target || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
-      const url = new URL(a.href, location.href);
-      if (url.origin !== location.origin || (url.pathname === location.pathname && url.hash)) return;
-      e.preventDefault();
-      gsap.fromTo(curtain, { yPercent: 100 }, {
-        yPercent: 0, duration: 0.6, ease: 'expo.in',
-        onComplete: () => { location.href = url.href; },
-      });
-    });
-    // Botão "voltar" do navegador reabre a página do cache: a cortina não pode ficar fechada.
-    addEventListener('pageshow', e => { if (e.persisted) gsap.set(curtain, { yPercent: -100 }); });
-  
-    // ---------- letras do título sobem uma a uma ----------
-    document.querySelectorAll('[data-split]').forEach(el => {
-      const texto = el.textContent.trim();
-      el.setAttribute('aria-label', texto);
-      el.textContent = '';
-      for (const letra of texto) {
-        const s = document.createElement('span');
-        s.className = 'l';
-        s.setAttribute('aria-hidden', 'true');
-        s.textContent = letra;
-        el.append(s);
+  const anima = window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const temMouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (!anima) return; // sem GSAP ou com "menos movimento" ligado: a página funciona parada
+
+  // rolagem suave (data-lenis-prevent nos canvas 3D deixa a roda do mouse dar zoom)
+  if (window.Lenis) {
+    const lenis = new Lenis({ lerp: 0.12 });
+    gsap.ticker.add(t => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  // título do hero: letras sobem de dentro de cada palavra
+  document.querySelectorAll('[data-split]').forEach(el => {
+    const texto = el.textContent.trim();
+    el.setAttribute('aria-label', texto);
+    el.textContent = '';
+    texto.split(' ').forEach((palavra, i, todas) => {
+      const p = document.createElement('span');
+      p.className = 'p';
+      p.setAttribute('aria-hidden', 'true');
+      for (const letra of palavra) {
+        const l = document.createElement('span');
+        l.className = 'l';
+        l.textContent = letra;
+        p.append(l);
       }
-      gsap.from(el.querySelectorAll('.l'), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: 0.06, delay: 0.7 });
+      el.append(p, i < todas.length - 1 ? ' ' : '');
     });
-  
-    // ---------- palavras acendem conforme rola ----------
-    document.querySelectorAll('[data-words]').forEach(el => {
-      const palavras = el.textContent.trim().split(/\s+/);
-      el.textContent = '';
-      for (const p of palavras) {
-        const s = document.createElement('span');
-        s.className = 'w';
-        s.textContent = p + ' ';
-        el.append(s);
-      }
-      gsap.to(el.querySelectorAll('.w'), {
-        opacity: 1, stagger: 0.1, ease: 'none',
-        scrollTrigger: { trigger: el, start: 'top 80%', end: 'bottom 45%', scrub: true },
-      });
+    gsap.from(el.querySelectorAll('.l'), { yPercent: 115, duration: 1, ease: 'expo.out', stagger: 0.025, delay: 0.9 });
+  });
+
+  if (!temMouse) return; // os efeitos abaixo dependem de um mouse de verdade
+
+  // cards inclinam em 3D na direção do mouse
+  let ultimo = null;
+  document.addEventListener('pointermove', e => {
+    const img = e.target.closest?.('.card-img');
+    if (ultimo && ultimo !== img) { ultimo.style.removeProperty('--rx'); ultimo.style.removeProperty('--ry'); }
+    ultimo = img;
+    if (!img) return;
+    const r = img.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    img.style.setProperty('--ry', `${x * 10}deg`);
+    img.style.setProperty('--rx', `${-y * 10}deg`);
+  });
+
+  // categorias: a foto da categoria segue o cursor
+  const lista = document.querySelector('.cats');
+  if (!lista) return;
+  const previa = document.createElement('img');
+  previa.className = 'cats-previa';
+  previa.alt = '';
+  document.body.append(previa);
+  const irX = gsap.quickTo(previa, 'x', { duration: 0.5, ease: 'power3' });
+  const irY = gsap.quickTo(previa, 'y', { duration: 0.5, ease: 'power3' });
+  lista.addEventListener('pointermove', e => { irX(e.clientX + 24); irY(e.clientY - 140); });
+  lista.querySelectorAll('a[data-foto]').forEach(a => {
+    a.addEventListener('pointerenter', () => {
+      previa.src = a.dataset.foto;
+      gsap.to(previa, { opacity: 1, scale: 1, rotate: gsap.utils.random(-6, 6), duration: 0.4, ease: 'back.out(2)' });
     });
-  
-    // ---------- cards e categorias aparecem ao entrar na tela ----------
-    gsap.set('[data-reveal]', { y: 60, opacity: 0 });
-    ScrollTrigger.batch('[data-reveal]', {
-      start: 'top 92%',
-      once: true,
-      onEnter: els => gsap.to(els, { y: 0, opacity: 1, duration: 1, ease: 'expo.out', stagger: 0.08 }),
-    });
-  })();
+    a.addEventListener('pointerleave', () => gsap.to(previa, { opacity: 0, scale: 0.6, duration: 0.25 }));
+  });
+})();

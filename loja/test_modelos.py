@@ -1,4 +1,4 @@
-"""Testes do preço gravado no pedido (preco_unitario), da migração 0002 e das constraints.
+"""Testes do preço gravado no pedido (preco_unitario), da migração 0004 e das constraints.
 
 Rodar com: python manage.py test loja
 """
@@ -64,10 +64,10 @@ class PopularLojaTest(TestCase):
 
 
 class MigracaoPrecoUnitarioTest(TransactionTestCase):
-    """Volta o banco para a 0001, cria um pedido antigo (sem preco_unitario) e aplica a 0002."""
+    """Volta o banco para a 0003, cria um pedido antigo (sem preco_unitario) e aplica a 0004."""
 
-    antes = [("loja", "0001_initial")]
-    depois = [("loja", "0002_pedido_preco_unitario")]
+    antes = [("loja", "0003_cores_e_modelos_locais")]
+    depois = [("loja", "0004_pedido_preco_unitario")]
 
     def tearDown(self):
         # deixa o banco de teste no estado mais recente para os outros testes

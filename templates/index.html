@@ -2,33 +2,39 @@
 {% load static %}
 
 {% block conteudo %}
-<section class="hero">
-  <div class="hero-meta">
-    <span>Drop 01<br>Inverno 26</span>
-    <a class="btn" href="{% url 'loja:produtos' %}">Ver a loja →</a>
+<section class="hero" aria-labelledby="hero-titulo">
+  <canvas id="hero-3d" role="img" aria-label="As peças em destaque, em 3D"></canvas>
+  {# dados das peças que caem no hero (o hero.js lê daqui) #}
+  <ul id="hero-pecas" hidden>
+    {% for p in destaques %}
+      <li data-categoria="{{ p.categoria }}" data-cor="{{ p.cor }}" data-modelo="{{ p.modelo_3d|default:'' }}" data-media="{% get_media_prefix %}"></li>
+    {% endfor %}
+  </ul>
+  <div class="hero-texto">
+    <h1 id="hero-titulo" data-split>Roupa que você gira antes de comprar.</h1>
+    <a class="btn" href="{% url 'loja:produtos' %}">Ver as peças</a>
   </div>
-  <canvas id="hero-3d" aria-label="Peças NEXAR girando em 3D"></canvas>
-  <h1 class="hero-title" data-split>NEXAR</h1>
-</section>
-
-<section class="section">
-  <p class="manifesto" data-words>Roupa pra quem anda na rua e vive na tela. Gire, aproxime e veja cada peça em 3D antes de comprar.</p>
 </section>
 
 <section class="section">
   <div class="section-head">
-    <h2>Destaques</h2>
-    <a class="link" href="{% url 'loja:produtos' %}">Ver tudo</a>
+    <h2 class="secao-titulo">Destaques</h2>
+    <a class="link" href="{% url 'loja:produtos' %}">Ver todas</a>
   </div>
   <div class="grid">
     {% for p in destaques %}{% include "_card.html" %}{% endfor %}
   </div>
 </section>
 
-<section class="section cats">
-  {% for c in categorias %}
-    <a href="{% url 'loja:produtos' %}?categoria={{ c.id }}" data-reveal>{{ c.nome }} <span>→</span></a>
-  {% endfor %}
+<section class="section" aria-labelledby="cats-titulo">
+  <h2 id="cats-titulo" class="sr">Categorias</h2>
+  <nav class="cats" aria-label="Categorias">
+    {% for c in categorias %}
+      {% with p=c.produto_set.first %}
+        <a href="{% url 'loja:produtos' %}?categoria={{ c.id }}" {% if p.imagem %}data-foto="{{ p.imagem.url }}"{% endif %}>{{ c.nome|lower }}</a>
+      {% endwith %}
+    {% endfor %}
+  </nav>
 </section>
 {% endblock %}
 

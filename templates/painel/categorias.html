@@ -8,7 +8,7 @@
   <form class="busca" method="post" action="{% url 'loja:painel_categoria_nova' %}">
     {% csrf_token %}
     <input type="text" name="nome" placeholder="Nova categoria..." aria-label="Nome da nova categoria" maxlength="50" required>
-    <button type="submit">+ Adicionar</button>
+    <button type="submit">Adicionar</button>
   </form>
 </div>
 
