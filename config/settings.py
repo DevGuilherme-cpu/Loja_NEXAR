@@ -83,7 +83,8 @@ if os.getenv("DATABASE_URL"):
         "PASSWORD": unquote(url.password or ""),
         "HOST": url.hostname,
         "PORT": url.port or 5432,
-        "OPTIONS": {"sslmode": "require"},
+        # SSL obrigatório no Supabase; DB_SSLMODE=disable só para PostgreSQL local de teste
+        "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require")},
         # exigido pelo pooler do Supabase
         "DISABLE_SERVER_SIDE_CURSORS": True,
     }
