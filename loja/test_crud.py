@@ -243,3 +243,47 @@ class SemPermissaoTest(CrudBase):
     def test_cliente_comum(self):
         self.client.force_login(self.cliente)
         self.tentar_tudo()
+
+
+class CorAutomaticaEArquivosTest(TestCase):
+    """Correções do QA: cor vazia não vira #22306B sozinha; sem 'limpar arquivo' por POST forjado."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.models import User
+        cls.staff = User.objects.create_user("staff_cor", password="x", is_staff=True)
+        cls.cat = Categoria.objects.create(nome="Cat Cor")
+
+    def setUp(self):
+        self.client.force_login(self.staff)
+
+    def dados(self, prod, **extra):
+        base = {"nome": prod.nome, "descricao": "", "preco": "10.00", "estoque": "1",
+                "categoria": str(self.cat.id), "cor": "#22306B"}
+        base.update(extra)
+        return base
+
+    def test_produto_sem_cor_continua_sem_cor_ao_editar(self):
+        prod = Produto.objects.create(nome="Sem cor", preco="10.00", estoque=1, categoria=self.cat, cor="")
+        url = reverse("loja:painel_produto_editar", args=[prod.id])
+        self.assertContains(self.client.get(url), 'name="cor_automatica" checked')
+        r = self.client.post(url, self.dados(prod, preco="12.00", cor_automatica="on"))
+        self.assertEqual(r.status_code, 302)
+        prod.refresh_from_db()
+        self.assertEqual(prod.cor, "")
+        self.assertEqual(str(prod.preco), "12.00")
+
+    def test_desmarcar_automatica_grava_a_cor(self):
+        prod = Produto.objects.create(nome="Vai ter cor", preco="10.00", estoque=1, categoria=self.cat, cor="")
+        r = self.client.post(reverse("loja:painel_produto_editar", args=[prod.id]), self.dados(prod, cor="#aa00ff"))
+        self.assertEqual(r.status_code, 302)
+        prod.refresh_from_db()
+        self.assertEqual(prod.cor, "#AA00FF")
+
+    def test_post_forjado_nao_limpa_modelo(self):
+        prod = Produto.objects.create(nome="Com modelo", preco="10.00", estoque=1, categoria=self.cat,
+                                      cor="#111111", modelo_3d="/static/modelos/tenis.glb")
+        self.client.post(reverse("loja:painel_produto_editar", args=[prod.id]),
+                         self.dados(prod, cor="#111111", **{"modelo_3d-clear": "on"}))
+        prod.refresh_from_db()
+        self.assertEqual(prod.modelo_3d.name, "/static/modelos/tenis.glb")

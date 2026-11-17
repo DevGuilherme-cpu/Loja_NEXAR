@@ -101,6 +101,8 @@ class ProdutoForm(forms.ModelForm):
         label="Cor da peça", regex=COR_REGEX, required=False, max_length=7,
         error_messages={"invalid": "Cor inválida: use o formato #RRGGBB (ex.: #1F2F6B)."},
     )
+    # <input type=color> sempre envia uma cor; esta opção grava cor vazia (o 3D escolhe a cor sozinho)
+    cor_automatica = forms.BooleanField(label="Cor automática", required=False)
 
     class Meta:
         model = Produto
@@ -109,11 +111,25 @@ class ProdutoForm(forms.ModelForm):
             "nome": "Nome", "descricao": "Descrição", "preco": "Preço (R$)", "estoque": "Estoque",
             "categoria": "Categoria", "imagem": "Foto", "imagem_2": "Foto vestindo", "modelo_3d": "Modelo 3D (.glb)",
         }
+        # FileInput simples: sem o "limpar" do ClearableFileInput (não há botão de remover na tela)
+        widgets = {"imagem": forms.FileInput, "imagem_2": forms.FileInput, "modelo_3d": forms.FileInput}
         error_messages = {
             "imagem": {"invalid_image": "Envie uma imagem válida (JPG, PNG, WebP...). O arquivo enviado não é uma imagem."},
             "imagem_2": {"invalid_image": "Envie uma imagem válida (JPG, PNG, WebP...). O arquivo enviado não é uma imagem."},
             "categoria": {"invalid_choice": "Categoria inexistente. Escolha uma categoria da lista."},
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.initial["cor_automatica"] = not (self.instance and self.instance.cor)
+
+    def clean(self):
+        dados = super().clean()
+        if dados.get("cor_automatica"):
+            dados["cor"] = ""
+            self.errors.pop("cor", None)  # cor ignorada quando a automática está marcada
+        return dados
 
     def clean_cor(self):
         return (self.cleaned_data.get("cor") or "").upper()

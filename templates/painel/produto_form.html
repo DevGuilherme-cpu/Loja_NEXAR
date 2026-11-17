@@ -13,6 +13,7 @@
   <div class="erro" role="alert">
     {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
     {% for campo in form %}{% for e in campo.errors %}<p>{{ campo.label }}: {{ e }}</p>{% endfor %}{% endfor %}
+    {% if request.FILES %}<p>Por segurança o navegador não guarda arquivos escolhidos: selecione as fotos/modelo de novo antes de salvar.</p>{% endif %}
   </div>
 {% endif %}
 
@@ -41,6 +42,7 @@
     </label>
     <label class="campo">Cor da peça
       <input type="color" name="cor" value="{{ form.cor.value|default:'#22306B' }}">
+      <small><input type="checkbox" name="cor_automatica" {% if form.cor_automatica.value %}checked{% endif %}> Cor automática (o 3D escolhe; desmarque para usar a cor acima)</small>
       <small>Muda a cor do 3D na prévia ao lado.</small>
     </label>
     <label class="campo">Foto
