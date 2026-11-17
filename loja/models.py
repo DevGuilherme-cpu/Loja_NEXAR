@@ -20,11 +20,11 @@ class Produto(models.Model):
     preco = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     estoque = models.PositiveIntegerField(default=0)
     imagem = models.ImageField(upload_to="produtos/", blank=True)
-    imagem_2 = models.ImageField(upload_to="produtos/", blank=True)  # aparece no hover do card
-    # .glb enviado pelo painel, ou um link https:// direto para o modelo
+    imagem_2 = models.ImageField(upload_to="produtos/", blank=True)
+    # .glb enviado pelo painel ou link
     modelo_3d = models.FileField(upload_to="modelos/", blank=True, max_length=255)
     cor = models.CharField(max_length=7, blank=True, help_text="Cor da peça 3D, ex.: #1F2F6B")
-    # PROTECT: não deixa apagar categoria que ainda tem produto (o MySQL também barraria pela FK)
+    # PROTECT: não apaga categoria com produtos
     categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT)
 
     class Meta:

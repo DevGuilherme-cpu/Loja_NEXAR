@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from .forms import AdminCriarUsuarioForm, AdminEditarUsuarioForm
 from .models import Categoria, Pedido, Produto
 
-# Admin pronto do Django em /admin/ (útil para conferir o banco; o painel da loja fica em /painel/)
 admin.site.register(Categoria)
 admin.site.register(Produto)
 

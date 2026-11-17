@@ -1,5 +1,4 @@
-# Dados falsos para o frontend funcionar antes do banco.
-# Eliton: quando o MySQL estiver pronto, troque estas listas por consultas no app.py
+# Dados de exemplo (usados pelo comando popular_loja)
 
 from datetime import datetime
 from types import SimpleNamespace
@@ -7,7 +6,7 @@ from types import SimpleNamespace
 SAPATO_3D = "/static/modelos/tenis.glb"  # Shopify, CC BY 4.0
 OCULOS_3D = "/static/modelos/oculos.glb"  # Khronos Group, CC BY 4.0
 
-# Cor real de cada peça (vira a cor do 3D)
+# cor de cada peça no 3D
 CORES = {
     "Camiseta Box Logo": "#E8641E", "Camiseta Grid": "#F2F2EF", "Moletom Heavy": "#22306B",
     "Moletom Drop 01": "#EDEDE9", "Calça Cargo Tech": "#5B6542", "Calça Wide Denim": "#8FB3D9",
@@ -23,12 +22,11 @@ CATEGORIAS = [
 ]
 
 
-# shortcut: imita o ImageField do Django (que tem .url); some quando o Eliton ligar o banco
 def _foto(nome):
     return SimpleNamespace(url=f"/static/img/produtos/{nome}.jpg")
 
 
-# foto = nome base dos arquivos em static/img/produtos (nome-1.jpg = card, nome-2.jpg = hover)
+# foto: nome-1.jpg e nome-2.jpg em static/img/produtos
 def _p(id, nome, preco, cat_id, descricao, modelo_3d=None, estoque=12, foto=None):
     cat = next(c for c in CATEGORIAS if c["id"] == cat_id)
     return {"id": id, "nome": nome, "descricao": descricao, "preco": preco, "estoque": estoque,
@@ -37,7 +35,7 @@ def _p(id, nome, preco, cat_id, descricao, modelo_3d=None, estoque=12, foto=None
             "modelo_3d": modelo_3d, "categoria_id": cat_id, "categoria": cat["nome"]}
 
 
-# Fotos: Pexels (licença livre, sem precisar de crédito). Números = IDs das fotos em pexels.com
+# fotos do Pexels (IDs nos comentários)
 PRODUTOS = [
     _p(1, "Camiseta Box Logo", 149.90, 1, "Algodão 240g, modelagem boxy, logo NEXAR bordado no peito.", foto="camiseta-box"),  # 36392069 / 18814063
     _p(2, "Camiseta Grid", 159.90, 1, "Estampa grid em silk, gola canelada reforçada.", foto="camiseta-grid"),  # 11671964 / 17858294

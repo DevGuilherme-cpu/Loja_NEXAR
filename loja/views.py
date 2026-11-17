@@ -15,12 +15,11 @@ from django.views.decorators.http import require_POST
 from .forms import EMAIL_REPETIDO, CadastroForm
 from .models import Categoria, Pedido, Produto
 
-# select_related("categoria") = JOIN com categorias numa consulta só (o card mostra o nome da categoria)
+# produtos já com a categoria (JOIN)
 PRODUTOS = Produto.objects.select_related("categoria")
 
 
 def filtrar(busca, categoria=""):
-    # SELECT ... WHERE nome LIKE '%busca%' [AND categoria_id = ...]
     lista = PRODUTOS.filter(nome__icontains=busca)
     return lista.filter(categoria_id=categoria) if categoria.isdigit() else lista
 
@@ -100,9 +99,8 @@ def cadastro(request):
     return render(request, "cadastro.html", {"form": form, "next": request.POST.get("next") or request.GET.get("next", "")})
 
 
-# ---------- painel admin ----------
-# A LEITURA já vem do banco. shortcut: salvar/excluir ainda não gravam nada.
-# Eliton: fazer o CRUD de verdade (INSERT/UPDATE/DELETE).
+# Painel
+# TODO: gravar no banco (salvar/excluir ainda são simulados)
 # Todas as views do painel exigem usuário staff (is_staff + ativo):
 #  - visitante  -> /entrar/?next=... (padrão do staff_member_required)
 #  - cliente logado sem is_staff -> home com mensagem de erro. Não dá para usar só o padrão
@@ -144,14 +142,13 @@ def painel_produto_excluir(request, id):
 
 @somente_staff
 def painel_categorias(request):
-    # SELECT categorias.*, COUNT(produtos.id) ... LEFT JOIN produtos ... GROUP BY categorias.id
     lista = Categoria.objects.annotate(total=Count("produto"))
     return render(request, "painel/categorias.html", {"lista": lista})
 
 
 @somente_staff
 @require_POST
-def painel_categoria_salvar(request, id=None):  # sem id = nova, com id = editar
+def painel_categoria_salvar(request, id=None):  # sem id = nova
     messages.info(request, "Salvar simulado: ainda não grava no banco.")
     return redirect("loja:painel_categorias")
 
@@ -165,6 +162,6 @@ def painel_categoria_excluir(request, id):
 
 @somente_staff
 def painel_pedidos(request):
-    # O JOIN do trabalho: pedidos + auth_user + produtos + categorias numa consulta só
+    # JOIN pedidos + usuário + produto + categoria
     pedidos = Pedido.objects.select_related("usuario", "produto__categoria")
     return render(request, "painel/pedidos.html", {"pedidos": pedidos})

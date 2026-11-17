@@ -1,20 +1,18 @@
-/* NEXAR — "estúdio de render"
-   Papel branco, as peças sobre um palco cinza de software 3D e as cores dos eixos X/Y/Z
-   só nas interações (vermelho = alerta, verde = confirmado, azul = o que você está mexendo). */
+/* NEXAR */
 
 :root {
   --papel: #ffffff;
   --palco: #dcdfe4;
   --palco-escuro: #c9cdd4;
   --tinta: #000000;
-  --nevoa: #575c64;          /* texto secundário: 6.6:1 no branco */
+  --nevoa: #575c64;
   --linha: rgba(0, 0, 0, .14);
-  --eixo-x: #c8233a;         /* alerta / exclusão (branco em cima: 5.3:1) */
-  --eixo-y: #1d7a43;         /* confirmado */
-  --eixo-z: #2747d6;         /* interação / foco (branco em cima: 6.4:1) */
+  --eixo-x: #c8233a;
+  --eixo-y: #1d7a43;
+  --eixo-z: #2747d6;
 
   --fonte: 'Archivo', system-ui, sans-serif;
-  /* escala 1.25 (terça maior) */
+
   --t-1: .8rem; --t0: 1rem; --t1: 1.25rem; --t2: 1.563rem; --t3: 1.953rem; --t4: 2.441rem;
 
   --r: 14px;
@@ -40,12 +38,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pular { position: absolute; left: var(--margem); top: -4rem; z-index: 100; padding: .6rem 1rem; background: var(--tinta); color: var(--papel); border-radius: var(--r-pequeno); }
 .pular:focus { top: .5rem; }
 
-/* ---------- tipografia de exibição: larga, pesada, em caixa normal ---------- */
+/* títulos */
 .display, .hero h1, .secao-titulo, .pdp-info h1, .auth-form h1, .painel-topo h1, .cats a {
   font-stretch: 125%; font-weight: 850; letter-spacing: -.035em; line-height: .95;
 }
 
-/* ---------- topo ---------- */
+/* topo */
 .aviso-frete { padding: .45rem var(--margem); background: var(--tinta); color: var(--papel); font-size: var(--t-1); text-align: center; }
 
 .topo {
@@ -73,13 +71,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .topo-busca input:focus { width: 14rem; background: var(--papel); outline: 2px solid var(--eixo-z); outline-offset: 0; }
 
-/* ---------- avisos (mensagens do Django) ---------- */
+/* avisos */
 .avisos { padding: 0 var(--margem); }
 .aviso { margin-top: 1rem; padding: .85rem 1.1rem; border-radius: var(--r-pequeno); background: var(--palco); font-weight: 500; }
 .aviso.success { background: var(--eixo-y); color: var(--papel); }
 .aviso.error { background: var(--eixo-x); color: var(--papel); }
 
-/* ---------- botões e links ---------- */
+/* botões e links */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   padding: .95rem 1.6rem; border: 0; border-radius: var(--r);
@@ -94,13 +92,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .link { font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .25em; }
 .link:hover { color: var(--eixo-z); }
 
-/* ---------- seções ---------- */
+/* seções */
 .section { padding: clamp(3rem, 7vw, 6rem) var(--margem); }
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 2rem; }
 .secao-titulo { font-size: clamp(2.4rem, 6vw, 4.8rem); }
 .contador { color: var(--nevoa); }
 
-/* ---------- hero: o palco do drop ---------- */
+/* hero */
 .hero {
   position: relative; margin: 0 var(--margem);
   height: min(84svh, 860px); min-height: 520px;
@@ -118,7 +116,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 [data-split] .l { display: inline-block; white-space: pre; }
 [data-split] .p { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; }
 
-/* ---------- grade de produtos ---------- */
+/* grade de produtos */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 2.5rem 1.25rem; }
 .card { display: block; }
 .card-img {
@@ -147,7 +145,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
 }
 .vazio { grid-column: 1 / -1; padding: 3rem 0; font-size: var(--t1); }
 
-/* ---------- categorias na home: palavras gigantes com prévia da foto ---------- */
+/* categorias */
 .cats { display: flex; flex-direction: column; }
 .cats a {
   display: block; padding: .15em 0; font-size: clamp(2.6rem, 9vw, 8.5rem);
@@ -159,7 +157,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
   border-radius: var(--r); object-fit: cover; pointer-events: none; opacity: 0; scale: .6;
 }
 
-/* ---------- loja: filtros ---------- */
+/* loja: filtros */
 .filtros { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 2.5rem; }
 .chips { display: flex; flex-wrap: wrap; gap: .5rem; }
 .chip { padding: .55rem 1.05rem; border-radius: 999px; background: var(--palco); font-weight: 500; transition: background .2s, color .2s; }
@@ -172,7 +170,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
 .busca button { padding: .5rem 1rem; border: 0; border-radius: 999px; background: var(--tinta); color: var(--papel); font-weight: 600; cursor: pointer; }
 .busca button:hover { background: var(--eixo-z); }
 
-/* ---------- página do produto ---------- */
+/* página do produto */
 .pdp { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: var(--margem); padding: 1.25rem var(--margem) 4rem; }
 .pdp-3d {
   position: relative; min-height: 70svh; border-radius: var(--r); background: var(--palco); overflow: hidden;
@@ -220,7 +218,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
 .pdp-form .btn { align-self: stretch; font-size: var(--t1); padding: 1.1rem; }
 .pdp-estoque { color: var(--eixo-x); font-weight: 600; }
 
-/* ---------- login e cadastro ---------- */
+/* login e cadastro */
 .auth { display: grid; grid-template-columns: 1fr 1fr; gap: var(--margem); padding: 1.25rem var(--margem) 4rem; }
 .auth .pdp-3d { min-height: 72svh; }
 .auth-form { display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; max-width: 30rem; }
@@ -239,7 +237,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
 .auth-troca { color: var(--nevoa); }
 .auth-troca a { color: var(--tinta); font-weight: 600; text-decoration: underline; text-underline-offset: .2em; }
 
-/* ---------- painel admin ---------- */
+/* painel admin */
 .painel { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: var(--margem); padding: 1.25rem var(--margem) 4rem; }
 .painel-menu { display: flex; flex-direction: column; gap: .3rem; align-self: start; position: sticky; top: 5.5rem; }
 .painel-menu a { padding: .65rem .9rem; border-radius: var(--r-pequeno); font-weight: 500; transition: background .2s; }
@@ -276,7 +274,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
 .form-preview { position: sticky; top: 5.5rem; display: flex; flex-direction: column; gap: .5rem; }
 .form-preview .pdp-3d { min-height: 400px; }
 
-/* ---------- rodapé ---------- */
+/* rodapé */
 .rodape { margin-top: 4rem; padding: 3rem var(--margem) 2rem; background: var(--tinta); color: var(--papel); }
 .rodape-marca { font-stretch: 125%; font-weight: 900; letter-spacing: -.05em; line-height: .8; font-size: clamp(4.5rem, 21vw, 20rem); }
 .rodape-colunas { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2rem; margin-top: 2.5rem; }
@@ -286,19 +284,19 @@ img[data-thumb]:not([src]) { visibility: hidden; }
 .rodape a:hover { color: var(--papel); }
 .rodape-creditos { color: #a5aab3; font-size: var(--t-1); }
 
-/* ---------- transições entre páginas (Chrome 126+); nos outros navegadores a troca é normal ---------- */
+/* transição entre páginas */
 @view-transition { navigation: auto; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .35s; }
 ::view-transition-group(*) { animation-duration: .55s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
 
-/* ---------- telas médias ---------- */
+/* telas médias */
 @media (max-width: 1100px) {
   .menu { display: none; }
   .form-painel { grid-template-columns: 1fr; }
   .form-preview { position: static; }
 }
 
-/* ---------- celular ---------- */
+/* celular */
 @media (max-width: 760px) {
   .topo { flex-wrap: wrap; gap: .75rem 1rem; }
   .menu { display: flex; order: 3; width: 100%; overflow-x: auto; gap: 1rem; padding-bottom: .2rem; scrollbar-width: none; }
@@ -315,7 +313,7 @@ img[data-thumb]:not([src]) { visibility: hidden; }
   .cats-previa { display: none; }
 }
 
-/* quem pediu menos movimento no sistema não recebe animação */
+/* reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
   @view-transition { navigation: none; }

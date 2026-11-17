@@ -1,5 +1,4 @@
-// Produto sem foto: desenha a frente e as costas da peça em 3D e usa como foto do card.
-// Só baixa o three.js (670 KB) quando existe algum card assim na página.
+// Gera a imagem do card quando o produto não tem foto
 const imagens = [...document.querySelectorAll('img[data-thumb]')];
 
 if (imagens.length) {
@@ -7,7 +6,7 @@ if (imagens.length) {
   const { criarRenderer, criarCena, criarModelo } = await import('./pecas.js');
   const anima = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Um canvas só para todos os cards: o navegador aceita poucos contextos WebGL ao mesmo tempo
+  // um canvas só para todos os cards
   const canvas = document.createElement('canvas');
   const renderer = criarRenderer(canvas, { preserveDrawingBuffer: true }, 1);
   renderer.setSize(640, 800, false);
@@ -15,7 +14,6 @@ if (imagens.length) {
   const camera = new THREE.PerspectiveCamera(30, 640 / 800, 0.1, 100);
   camera.position.set(0, 0, 7);
 
-  // Gira o modelo, desenha e devolve a imagem
   const foto = (modelo, giro) => {
     modelo.rotation.set(0.15, giro, 0);
     renderer.render(cena, camera);
@@ -27,7 +25,7 @@ if (imagens.length) {
     cena.add(modelo);
     img.src = foto(modelo, -0.5);                       // frente
     const verso = img.parentElement.querySelector('.card-img-2');
-    if (verso) verso.src = foto(modelo, Math.PI - 0.5); // costas (aparece no hover)
+    if (verso) verso.src = foto(modelo, Math.PI - 0.5); // costas
     if (anima) img.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600 });
     cena.remove(modelo);
   }

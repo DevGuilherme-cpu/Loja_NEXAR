@@ -1,12 +1,10 @@
 {% load static %}
 <a class="card" href="{% url 'loja:produto' p.id %}">
-  {# view-transition-name: ao clicar, esta foto "vira" o palco da página do produto #}
   <div class="card-img" style="view-transition-name: produto-{{ p.id }}">
     {% if p.imagem %}
       <img src="{{ p.imagem.url }}" alt="" width="800" height="1000" loading="lazy">
       {% if p.imagem_2 %}<img class="card-img-2" src="{{ p.imagem_2.url }}" alt="" loading="lazy">{% endif %}
     {% else %}
-      {# sem foto: o thumbs.js desenha a frente e as costas da peça em 3D aqui #}
       <img data-thumb data-id="{{ p.id }}" data-categoria="{{ p.categoria }}" data-modelo="{{ p.modelo_3d|default:'' }}"
            data-cor="{{ p.cor }}" data-media="{% get_media_prefix %}" alt="">
       <img class="card-img-2" alt="">

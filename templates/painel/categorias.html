@@ -22,7 +22,6 @@
         <tr>
           <td>{{ c.id }}</td>
           <td>
-            {# O botão Salvar fica em outra célula e aponta para este form pelo atributo form="..." #}
             <form id="cat-{{ c.id }}" method="post" action="{% url 'loja:painel_categoria_editar' c.id %}">
               {% csrf_token %}
               <input class="input-tabela" type="text" name="nome" value="{{ c.nome }}" aria-label="Nome da categoria {{ c.nome }}" maxlength="50" required>
