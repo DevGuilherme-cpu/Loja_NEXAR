@@ -46,8 +46,9 @@
     </div>
 
     {# TODO: action com a rota do pedido #}
-    <form class="pdp-form" method="post" action="">
+    <form class="pdp-form" method="post" action="{% url 'loja:pedido' %}">
       {% csrf_token %}
+      {% if token_pedido %}<input type="hidden" name="token_pedido" value="{{ token_pedido }}">{% endif %}
       <input type="hidden" name="produto_id" value="{{ produto.id }}">
       <input type="hidden" name="personalizacao" value="">
 
@@ -59,7 +60,7 @@
         <label><input type="radio" name="tamanho" value="GG"><span>GG</span></label>
       </fieldset>
       <label class="qtd">Quantidade
-        <input type="number" name="quantidade" value="1" min="1" max="{{ produto.estoque }}">
+        <input type="number" name="quantidade" value="1" min="1" max="{% if produto.estoque < 10 %}{{ produto.estoque }}{% else %}10{% endif %}">
       </label>
       {% if produto.estoque %}
         <button class="btn" type="submit">Comprar</button>
