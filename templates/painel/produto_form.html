@@ -17,6 +17,10 @@
   </div>
 {% endif %}
 
+{% if not uploads_habilitados %}
+  <p class="aviso" role="status">Envio de arquivos desativado neste ambiente (a hospedagem não guarda arquivos). Fotos e modelo 3D atuais são mantidos; os demais campos podem ser salvos normalmente.</p>
+{% endif %}
+
 <form class="form-painel" method="post" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="form-campos">
@@ -46,17 +50,17 @@
       <small>Muda a cor do 3D na prévia ao lado.</small>
     </label>
     <label class="campo">Foto
-      <input type="file" name="imagem" accept="image/*">
+      <input type="file" name="imagem" accept="image/*"{% if not uploads_habilitados %} disabled{% endif %}>
       <small>Opcional. Sem foto, o site desenha a peça em 3D.</small>
       {% if atuais.imagem %}<small>Atual: <a class="link" href="{{ atuais.imagem.1 }}" target="_blank" rel="noopener">{{ atuais.imagem.0 }}</a> (envie outra para trocar)</small>{% endif %}
     </label>
     <label class="campo">Foto vestindo
-      <input type="file" name="imagem_2" accept="image/*">
+      <input type="file" name="imagem_2" accept="image/*"{% if not uploads_habilitados %} disabled{% endif %}>
       <small>Opcional. Aparece quando o mouse passa no card.</small>
       {% if atuais.imagem_2 %}<small>Atual: <a class="link" href="{{ atuais.imagem_2.1 }}" target="_blank" rel="noopener">{{ atuais.imagem_2.0 }}</a> (envie outra para trocar)</small>{% endif %}
     </label>
     <label class="campo">Modelo 3D (.glb)
-      <input type="file" name="modelo_3d" accept=".glb,model/gltf-binary">
+      <input type="file" name="modelo_3d" accept=".glb,model/gltf-binary"{% if not uploads_habilitados %} disabled{% endif %}>
       <small>Opcional. Sem modelo, o site gera a peça pela categoria.</small>
       {% if atuais.modelo_3d %}<small>Atual: <a class="link" href="{{ atuais.modelo_3d.1 }}" target="_blank" rel="noopener">{{ atuais.modelo_3d.0 }}</a> (envie outro para trocar)</small>{% endif %}
     </label>

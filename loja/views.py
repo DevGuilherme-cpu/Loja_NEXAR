@@ -6,13 +6,14 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import Count, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso
+from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso,
+                    uploads_habilitados)
 from .models import Categoria, Pedido, Produto
 
 # produtos já com a categoria (JOIN)
@@ -128,7 +129,10 @@ def link_arquivo(arquivo):
     if not arquivo:
         return None
     nome = arquivo.name
-    url = nome if nome.startswith(("/", "http://", "https://")) else settings.MEDIA_URL + nome
+    if nome.startswith(("/", "http://", "https://")):
+        url = nome  # valores fixos (/static/modelos/...) ou links externos: como estão
+    else:
+        url = arquivo.url  # arquivo enviado: a URL vem do storage configurado (não MEDIA_URL + nome)
     return nome.rsplit("/", 1)[-1], url
 
 
@@ -137,17 +141,29 @@ def painel_produto_form(request, id=None):
     produto = get_object_or_404(PRODUTOS, id=id) if id is not None else None
     form = ProdutoForm(request.POST or None, request.FILES or None, instance=produto)
     if request.method == "POST" and form.is_valid():
-        salvo = form.save()  # INSERT (novo) ou UPDATE (edição); grava os uploads em MEDIA_ROOT
-        acao = "atualizado" if produto else "cadastrado"
-        messages.success(request, f"Produto “{salvo.nome}” {acao}.")
-        return redirect("loja:painel_produtos")
+        try:
+            # INSERT (novo) ou UPDATE (edição). Os uploads são gravados no storage ANTES do INSERT/UPDATE.
+            # O atomic desfaz só o banco: se o banco falhar depois, o arquivo já gravado fica órfão no
+            # storage (não há limpeza automática; pode ser apagado à mão em media/).
+            with transaction.atomic():
+                salvo = form.save()
+        except OSError:  # disco cheio, sem permissão, sistema de arquivos somente leitura...
+            form.add_error(None, "Não foi possível gravar os arquivos enviados. Nada foi salvo; tente de novo "
+                                 "ou salve sem anexos.")
+        except DatabaseError:
+            form.add_error(None, "Erro ao salvar no banco de dados. Nada foi salvo; tente de novo.")
+        else:
+            acao = "atualizado" if produto else "cadastrado"
+            messages.success(request, f"Produto “{salvo.nome}” {acao}.")
+            return redirect("loja:painel_produtos")
     # GET ou POST inválido (200 com os erros e o que foi digitado no form).
     # O is_valid() altera a instância em memória: a prévia e os arquivos atuais vêm do banco.
     if produto is not None and form.is_bound:
         produto = get_object_or_404(PRODUTOS, id=id)
     atuais = {campo: link_arquivo(getattr(produto, campo)) if produto else None
               for campo in ("imagem", "imagem_2", "modelo_3d")}
-    return render(request, "painel/produto_form.html", {"produto": produto, "form": form, "atuais": atuais})
+    return render(request, "painel/produto_form.html", {"produto": produto, "form": form, "atuais": atuais,
+                                                        "uploads_habilitados": uploads_habilitados()})
 
 
 @somente_staff

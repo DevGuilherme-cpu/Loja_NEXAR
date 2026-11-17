@@ -152,3 +152,7 @@ WHITENOISE_USE_FINDERS = True
 # uploads (na Vercel o MEDIA_URL vem do ambiente)
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = BASE_DIR / "media"
+# Upload de arquivos pelo painel. A Vercel define VERCEL=1 no runtime: lá o disco não persiste e o corpo
+# da requisição é limitado (~4,5 MB), então o padrão é desligado (o form recusa arquivos com aviso).
+# Pode ser forçado com UPLOADS_HABILITADOS=True/False.
+UPLOADS_HABILITADOS = os.getenv("UPLOADS_HABILITADOS", "False" if os.getenv("VERCEL") else "True") == "True"
