@@ -1042,3 +1042,33 @@ img[data-thumb]:not([src]) {
 .card-img-2:not([src]) {
   display: none;
 }
+/* ---------- conta: usuário logado no menu + mensagens da loja (fase 2 / auth) ---------- */
+.nav-usuario {
+  opacity: .6;
+}
+
+.nav-sair {
+  display: contents;
+}
+
+.nav-sair button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.nav-sair button:hover {
+  color: var(--accent);
+}
+
+.msgs-loja {
+  padding: 1rem 1.5rem 0;
+}
+
+.msgs-loja .msg:last-child {
+  margin-bottom: 0;
+}

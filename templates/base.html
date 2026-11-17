@@ -34,10 +34,18 @@
     </nav>
     <a class="logo" href="{% url 'loja:index' %}">NEXAR</a>
     <nav class="nav nav-right">
-      <a href="{% url 'loja:entrar' %}">Entrar</a>
+      {% if user.is_authenticated %}
+        <span class="nav-usuario">{{ user.get_username }}</span>
+        <form class="nav-sair" method="post" action="{% url 'loja:sair' %}">{% csrf_token %}<button type="submit">Sair</button></form>
+      {% else %}
+        <a href="{% url 'loja:entrar' %}">Entrar</a>
+      {% endif %}
       <a href="{% url 'loja:produtos' %}">Buscar</a>
     </nav>
   </header>
+
+  {# Mensagens da loja. O painel sobrescreve este bloco (vazio) porque já mostra as mensagens dentro dele. #}
+  {% block mensagens %}{% if messages %}<div class="msgs-loja">{% for m in messages %}<p class="msg {{ m.tags }}" role="status">{{ m }}</p>{% endfor %}</div>{% endif %}{% endblock %}
 
   <main>{% block conteudo %}{% endblock %}</main>
 
@@ -49,7 +57,7 @@
         <a href="{% url 'loja:produtos' %}">Tudo</a>
         {% for c in categorias %}<a href="{% url 'loja:produtos' %}?categoria={{ c.id }}">{{ c.nome }}</a>{% endfor %}
       </div>
-      <div><b>Conta</b><a href="{% url 'loja:entrar' %}">Entrar</a><a href="{% url 'loja:cadastro' %}">Criar conta</a><a href="{% url 'loja:painel_produtos' %}">Painel</a></div>
+      <div><b>Conta</b>{% if not user.is_authenticated %}<a href="{% url 'loja:entrar' %}">Entrar</a><a href="{% url 'loja:cadastro' %}">Criar conta</a>{% endif %}{% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}</div>
       <div><b>NEXAR</b><span>Projeto acadêmico 2026</span><span>Guilherme &amp; Eliton</span></div>
     </div>
   </footer>

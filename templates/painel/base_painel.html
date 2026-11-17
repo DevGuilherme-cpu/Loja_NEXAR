@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block mensagens %}{% endblock %}{# o painel mostra as mensagens dentro de .painel-conteudo #}
+
 {% block conteudo %}
 {% with rota=request.resolver_match.url_name %}
 <section class="painel">

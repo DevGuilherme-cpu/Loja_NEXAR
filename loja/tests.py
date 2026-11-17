@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -16,10 +17,18 @@ class LojaTest(TestCase):
         self.assertGreaterEqual(Produto.objects.count(), 5)
         self.assertGreaterEqual(Pedido.objects.count(), 5)
 
+    def entrar_como_staff(self):
+        self.client.force_login(User.objects.create_user("equipe", password="x", is_staff=True))
+
     def test_paginas_abrem(self):
-        for url in ["/", "/produtos/", "/produto/1/", "/painel/", "/painel/categorias/", "/painel/pedidos/"]:
+        for url in ["/", "/produtos/", "/produto/1/", "/entrar/", "/cadastro/"]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
         self.assertEqual(self.client.get("/produto/999/").status_code, 404)
+        for url in ["/painel/", "/painel/categorias/", "/painel/pedidos/"]:
+            self.assertEqual(self.client.get(url).status_code, 302, url)  # visitante vai para o login
+        self.entrar_como_staff()
+        for url in ["/painel/", "/painel/categorias/", "/painel/pedidos/"]:
+            self.assertEqual(self.client.get(url).status_code, 200, url)
 
     def test_busca_e_filtro(self):
         r = self.client.get("/produtos/", {"busca": "moletom"})
@@ -30,6 +39,7 @@ class LojaTest(TestCase):
         self.assertEqual(r.status_code, 200)
 
     def test_pedidos_mostram_join(self):
+        self.entrar_como_staff()
         html = self.client.get("/painel/pedidos/").content.decode()
         self.assertIn("ana.souza", html)
         self.assertIn("R$ 449,70", html)  # 3 x 149,90 calculado pelo total do model

@@ -8,8 +8,9 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("produtos/", views.produtos, name="produtos"),
     path("produto/<int:id>/", views.produto, name="produto"),
-    path("entrar/", views.entrar, name="entrar"),
+    path("entrar/", views.Entrar.as_view(), name="entrar"),
     path("cadastro/", views.cadastro, name="cadastro"),
+    path("sair/", views.Sair.as_view(), name="sair"),
 
     # painel admin
     path("painel/", views.painel_produtos, name="painel_produtos"),

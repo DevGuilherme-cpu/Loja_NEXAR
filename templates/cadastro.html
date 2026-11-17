@@ -30,6 +30,7 @@
     <label class="campo">Confirmar senha
       <input type="password" name="password2" autocomplete="new-password" minlength="8" required>
     </label>
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     <button class="btn" type="submit">Criar conta →</button>
     <p class="auth-troca">Já tem conta? <a href="{% url 'loja:entrar' %}">Entrar</a></p>
   </form>

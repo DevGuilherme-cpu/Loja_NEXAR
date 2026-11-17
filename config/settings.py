@@ -124,6 +124,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Login / logout (nomes de rota do app loja)
+LOGIN_URL = "loja:entrar"
+LOGIN_REDIRECT_URL = "loja:index"
+LOGOUT_REDIRECT_URL = "loja:index"
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
