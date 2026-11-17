@@ -7,12 +7,12 @@ from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import IntegrityError, transaction
-from django.db.models import Count
+from django.db.models import Count, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import EMAIL_REPETIDO, CadastroForm, email_em_uso
+from .forms import CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso
 from .models import Categoria, Pedido, Produto
 
 # produtos já com a categoria (JOIN)
@@ -99,8 +99,7 @@ def cadastro(request):
     return render(request, "cadastro.html", {"form": form, "next": request.POST.get("next") or request.GET.get("next", "")})
 
 
-# Painel
-# TODO: gravar no banco (salvar/excluir ainda são simulados)
+# Painel (CRUD de produtos e categorias pelo ORM)
 # Todas as views do painel exigem usuário staff (is_staff + ativo):
 #  - visitante  -> /entrar/?next=... (padrão do staff_member_required)
 #  - cliente logado sem is_staff -> home com mensagem de erro. Não dá para usar só o padrão
@@ -124,19 +123,45 @@ def painel_produtos(request):
     return render(request, "painel/produtos.html", {"produtos": filtrar(busca), "busca": busca})
 
 
+def link_arquivo(arquivo):
+    """(nome, url) do arquivo atual de um campo, ou None. Aceita caminho /static/... e link http(s)."""
+    if not arquivo:
+        return None
+    nome = arquivo.name
+    url = nome if nome.startswith(("/", "http://", "https://")) else settings.MEDIA_URL + nome
+    return nome.rsplit("/", 1)[-1], url
+
+
 @somente_staff
 def painel_produto_form(request, id=None):
     produto = get_object_or_404(PRODUTOS, id=id) if id is not None else None
-    if request.method == "POST":
-        messages.info(request, "Salvar simulado: ainda não grava no banco.")
+    form = ProdutoForm(request.POST or None, request.FILES or None, instance=produto)
+    if request.method == "POST" and form.is_valid():
+        salvo = form.save()  # INSERT (novo) ou UPDATE (edição); grava os uploads em MEDIA_ROOT
+        acao = "atualizado" if produto else "cadastrado"
+        messages.success(request, f"Produto “{salvo.nome}” {acao}.")
         return redirect("loja:painel_produtos")
-    return render(request, "painel/produto_form.html", {"produto": produto})
+    # GET ou POST inválido (200 com os erros e o que foi digitado no form).
+    # O is_valid() altera a instância em memória: a prévia e os arquivos atuais vêm do banco.
+    if produto is not None and form.is_bound:
+        produto = get_object_or_404(PRODUTOS, id=id)
+    atuais = {campo: link_arquivo(getattr(produto, campo)) if produto else None
+              for campo in ("imagem", "imagem_2", "modelo_3d")}
+    return render(request, "painel/produto_form.html", {"produto": produto, "form": form, "atuais": atuais})
 
 
 @somente_staff
 @require_POST
 def painel_produto_excluir(request, id):
-    messages.error(request, "Exclusão simulada: ainda não apaga do banco.")
+    produto = get_object_or_404(Produto, id=id)
+    try:
+        produto.delete()  # DELETE; arquivos de mídia ficam no disco
+    except ProtectedError:  # Pedido.produto é PROTECT
+        total = produto.pedido_set.count()
+        messages.error(request, f"O produto “{produto.nome}” tem {total} pedido(s) e não pode ser excluído. "
+                                "Para tirá-lo de venda, zere o estoque.")
+    else:
+        messages.success(request, f"Produto “{produto.nome}” excluído.")
     return redirect("loja:painel_produtos")
 
 
@@ -149,14 +174,38 @@ def painel_categorias(request):
 @somente_staff
 @require_POST
 def painel_categoria_salvar(request, id=None):  # sem id = nova
-    messages.info(request, "Salvar simulado: ainda não grava no banco.")
+    categoria = get_object_or_404(Categoria, id=id) if id is not None else None
+    antigo = categoria.nome if categoria else None
+    form = CategoriaForm(request.POST, instance=categoria)
+    if not form.is_valid():
+        erros = " ".join(e for lista in form.errors.values() for e in lista)
+        messages.error(request, f"Categoria não salva: {erros}")
+        return redirect("loja:painel_categorias")
+    try:
+        with transaction.atomic():  # corrida: o índice único do banco decide
+            salva = form.save()  # INSERT ou UPDATE
+    except IntegrityError:
+        messages.error(request, f"Categoria não salva: {CATEGORIA_REPETIDA}")
+    else:
+        if antigo is None:
+            messages.success(request, f"Categoria “{salva.nome}” criada.")
+        else:
+            messages.success(request, f"Categoria “{antigo}” renomeada para “{salva.nome}”.")
     return redirect("loja:painel_categorias")
 
 
 @somente_staff
 @require_POST
 def painel_categoria_excluir(request, id):
-    messages.error(request, "Exclusão simulada: ainda não apaga do banco.")
+    categoria = get_object_or_404(Categoria, id=id)
+    try:
+        categoria.delete()  # DELETE
+    except ProtectedError:  # Produto.categoria é PROTECT
+        total = categoria.produto_set.count()
+        messages.error(request, f"A categoria “{categoria.nome}” tem {total} produto(s) e não pode ser excluída. "
+                                "Mova ou exclua esses produtos antes.")
+    else:
+        messages.success(request, f"Categoria “{categoria.nome}” excluída.")
     return redirect("loja:painel_categorias")
 
 
