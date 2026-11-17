@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-export const CORES = ['#111111', '#ff4d00', '#e8e4dc', '#3a5bff', '#c8ff00', '#7b5cff'];
+// Cores de reserva, só para produto sem cor cadastrada
+export const CORES = ['#22306b', '#e8641e', '#5b6542', '#8fb3d9', '#c8233a', '#ededE9'];
 
 // Metade direita do contorno de cada peça (x, y). A metade esquerda é espelhada automaticamente.
 const CAMISETA = [[0.35, 1], [0.95, 0.82], [1.4, 0.3], [1.05, 0.05], [0.75, 0.3], [0.75, -1.1]];
@@ -95,24 +96,37 @@ export function encaixar(obj, tamanho = 2.4) {
 }
 
 const loader = new GLTFLoader();
-// Link completo (http...) ou caminho absoluto: usa direto. Senão é um arquivo enviado pelo admin (pasta media).
-const caminho = url => (url.startsWith('http') || url.startsWith('/') ? url : '/media/' + url);
+// Link completo (http...) ou caminho absoluto: usa direto. Senão é um arquivo enviado pelo painel,
+// que fica na pasta de mídia (o template passa o prefixo em data-media, que muda na Vercel).
+const caminho = (url, media = '/media/') => (url.startsWith('http') || url.startsWith('/') ? url : media + url);
 
-// dados = data-* do HTML: categoria, modelo (.glb opcional) e seed (escolhe a cor)
-export async function criarModelo({ categoria, modelo, seed = 0 }, tamanho) {
+// dados = data-* do HTML: categoria, modelo (.glb opcional), cor (#hex) e seed (cor de reserva)
+export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, tamanho) {
   if (modelo) {
     try {
-      return encaixar((await loader.loadAsync(caminho(modelo))).scene, tamanho);
+      return encaixar((await loader.loadAsync(caminho(modelo, media))).scene, tamanho);
     } catch (erro) {
       console.warn('Modelo 3D não carregou, usando peça gerada:', erro);
     }
   }
-  return encaixar(criarPeca(tipoDaCategoria(categoria), CORES[seed % CORES.length]), tamanho);
+  const peca = encaixar(criarPeca(tipoDaCategoria(categoria), cor || CORES[seed % CORES.length]), tamanho);
+  peca.userData.gerada = true; // só peça gerada pode trocar de cor (o .glb tem textura própria)
+  return peca;
 }
 
-export function criarRenderer(canvas, opcoes = {}) {
+// Troca a cor do tecido de uma peça gerada (usado no painel quando o admin escolhe a cor)
+export function pintar(peca, cor) {
+  if (!peca.userData.gerada) return;
+  peca.traverse(m => {
+    if (!m.isMesh) return;
+    m.material.color.set(cor);
+    m.material.sheenColor.set(cor).lerp(new THREE.Color('#ffffff'), 0.5);
+  });
+}
+
+export function criarRenderer(canvas, opcoes = {}, maxPixelRatio = 2) {
   const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, ...opcoes });
-  r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  r.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio));
   r.toneMapping = THREE.ACESFilmicToneMapping;
   return r;
 }

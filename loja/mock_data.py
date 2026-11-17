@@ -4,8 +4,15 @@
 from datetime import datetime
 from types import SimpleNamespace
 
-SAPATO_3D = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
-OCULOS_3D = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SunglassesKhronos/glTF-Binary/SunglassesKhronos.glb"
+SAPATO_3D = "/static/modelos/tenis.glb"  # Shopify, CC BY 4.0
+OCULOS_3D = "/static/modelos/oculos.glb"  # Khronos Group, CC BY 4.0
+
+# Cor real de cada peça (vira a cor do 3D)
+CORES = {
+    "Camiseta Box Logo": "#E8641E", "Camiseta Grid": "#F2F2EF", "Moletom Heavy": "#22306B",
+    "Moletom Drop 01": "#EDEDE9", "Calça Cargo Tech": "#5B6542", "Calça Wide Denim": "#8FB3D9",
+    "Boné 6-Panel": "#F4F4F1",
+}
 
 CATEGORIAS = [
     {"id": 1, "nome": "Camisetas"},

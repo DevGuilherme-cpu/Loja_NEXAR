@@ -5,13 +5,24 @@
 
 {% block conteudo %}
 <section class="pdp">
-  <div class="pdp-3d">
-    <canvas id="viewer-3d"
-            data-id="{{ produto.id }}"
-            data-categoria="{{ produto.categoria }}"
-            data-modelo="{{ produto.modelo_3d|default:'' }}"
-            aria-label="{{ produto.nome }} em 3D. Arraste para girar."></canvas>
-    <span class="pdp-dica">Arraste para girar · role para aproximar</span>
+  {# chega mostrando a foto (continua a animação do card) e logo vira a peça em 3D #}
+  <div class="pdp-3d" data-vista="{% if produto.imagem %}foto1{% else %}3d{% endif %}" style="view-transition-name: produto-{{ produto.id }}">
+    <canvas id="viewer-3d" role="img" aria-label="{{ produto.nome }} em 3D. Arraste para girar." data-lenis-prevent
+            data-id="{{ produto.id }}" data-categoria="{{ produto.categoria }}" data-modelo="{{ produto.modelo_3d|default:'' }}"
+            data-cor="{{ produto.cor }}" data-media="{% get_media_prefix %}"></canvas>
+    {% if produto.imagem %}<img class="pdp-foto" data-foto="foto1" src="{{ produto.imagem.url }}" alt="{{ produto.nome }}">{% endif %}
+    {% if produto.imagem_2 %}<img class="pdp-foto" data-foto="foto2" src="{{ produto.imagem_2.url }}" alt="{{ produto.nome }} sendo usado">{% endif %}
+    <p class="pdp-dica">Arraste para girar. Aproxime com a roda do mouse ou com dois dedos.</p>
+
+    {% if produto.imagem %}
+      <div class="pdp-vistas" role="group" aria-label="Como ver o produto">
+        <button type="button" data-vista="3d" aria-pressed="false">3D</button>
+        <button type="button" data-vista="foto1" aria-pressed="true"><img src="{{ produto.imagem.url }}" alt="Foto"></button>
+        {% if produto.imagem_2 %}
+          <button type="button" data-vista="foto2" aria-pressed="false"><img src="{{ produto.imagem_2.url }}" alt="Foto vestindo"></button>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 
   <div class="pdp-info">
@@ -35,8 +46,8 @@
         <input type="number" name="quantidade" value="1" min="1" max="{{ produto.estoque }}">
       </label>
       {% if produto.estoque %}
-        <button class="btn" type="submit">Comprar →</button>
-        {% if produto.estoque <= 3 %}<p class="pdp-estoque">Só {{ produto.estoque }} em estoque</p>{% endif %}
+        <button class="btn" type="submit">Comprar</button>
+        {% if produto.estoque <= 3 %}<p class="pdp-estoque">Só restam {{ produto.estoque }} peças.</p>{% endif %}
       {% else %}
         <button class="btn" type="submit" disabled>Esgotado</button>
       {% endif %}
