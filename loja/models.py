@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -16,7 +17,7 @@ class Categoria(models.Model):
 class Produto(models.Model):
     nome = models.CharField(max_length=100)
     descricao = models.TextField(blank=True)
-    preco = models.DecimalField(max_digits=10, decimal_places=2)
+    preco = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     estoque = models.PositiveIntegerField(default=0)
     imagem = models.ImageField(upload_to="produtos/", blank=True)
     imagem_2 = models.ImageField(upload_to="produtos/", blank=True)  # aparece no hover do card
@@ -28,6 +29,9 @@ class Produto(models.Model):
     class Meta:
         db_table = "produtos"
         ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(preco__gte=0), name="produto_preco_nao_negativo"),
+        ]
 
     def __str__(self):
         return self.nome
@@ -39,16 +43,23 @@ class Pedido(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     produto = models.ForeignKey(Produto, on_delete=models.PROTECT)
     tamanho = models.CharField(max_length=2, choices=TAMANHOS)
-    quantidade = models.PositiveIntegerField(default=1)
+    quantidade = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    # preço do produto no momento da compra: se o preço do produto mudar depois,
+    # o total dos pedidos antigos continua o mesmo
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     data = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "pedidos"
         ordering = ["-data"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantidade__gte=1), name="pedido_quantidade_minima_1"),
+            models.CheckConstraint(condition=models.Q(preco_unitario__gte=0), name="pedido_preco_unitario_nao_negativo"),
+        ]
 
     def __str__(self):
         return f"Pedido {self.id} - {self.usuario} - {self.produto}"
 
     @property
     def total(self):
-        return self.produto.preco * self.quantidade
+        return self.preco_unitario * self.quantidade
