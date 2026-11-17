@@ -3,7 +3,7 @@
 from datetime import datetime
 from types import SimpleNamespace
 
-SAPATO_3D = "/static/modelos/tenis.glb"  # Shopify, CC BY 4.0
+SAPATO_3D = "/static/modelos/tenis-nexar.glb"  # modelo próprio (Meshy + Blender)
 OCULOS_3D = "/static/modelos/oculos.glb"  # Khronos Group, CC BY 4.0
 
 # cor de cada peça no 3D
