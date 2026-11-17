@@ -1,6 +1,6 @@
 from django.db import migrations
 
-# Cor real de cada peça (vira a cor do 3D) e os .glb servidos pelo próprio site
+# cor de cada peça e modelos .glb locais
 CORES = {
     "Camiseta Box Logo": "#E8641E",
     "Camiseta Grid": "#F2F2EF",
@@ -18,7 +18,7 @@ def preencher(apps, schema_editor):
     Produto = apps.get_model("loja", "Produto")
     for nome, cor in CORES.items():
         Produto.objects.filter(nome=nome, cor="").update(cor=cor)
-    # troca os links do GitHub (lentos e dependem de internet) pelos arquivos em static/modelos
+    # links do GitHub -> static/modelos
     for p in Produto.objects.filter(modelo_3d__contains="raw.githubusercontent.com"):
         for trecho, local in MODELOS.items():
             if local and trecho in p.modelo_3d.name:

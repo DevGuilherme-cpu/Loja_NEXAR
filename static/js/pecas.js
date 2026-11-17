@@ -1,17 +1,17 @@
-// Peças 3D da NEXAR: gera roupas "infladas" em código e carrega modelos .glb quando o produto tiver um.
+// Peças 3D: geradas por código ou carregadas de um .glb
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// Cores de reserva, só para produto sem cor cadastrada
+// cores padrão
 export const CORES = ['#22306b', '#e8641e', '#5b6542', '#8fb3d9', '#c8233a', '#ededE9'];
 
-// Metade direita do contorno de cada peça (x, y). A metade esquerda é espelhada automaticamente.
+// metade direita do contorno (a esquerda é espelhada)
 const CAMISETA = [[0.35, 1], [0.95, 0.82], [1.4, 0.3], [1.05, 0.05], [0.75, 0.3], [0.75, -1.1]];
 const MOLETOM = [[0.38, 1], [1, 0.82], [1.75, -0.55], [1.38, -0.78], [0.8, 0.12], [0.8, -1.1]];
 const CALCA = [[0.7, 1.1], [0.88, -1.3], [0.18, -1.3], [0, 0.15]];
 
-// gola: quanto a curva do pescoço desce (negativo) ou sobe como capuz (positivo)
+// gola < 0 desce, gola > 0 vira capuz
 function contorno(meia, gola = null) {
   const s = new THREE.Shape();
   const [x0, y0] = meia[0];
@@ -31,7 +31,7 @@ function tecido(cor) {
   });
 }
 
-// Extrusão com chanfro grande = visual de roupa inflada
+// extrusão com chanfro = efeito inflado
 function inflar(shape, cor, profundidade = 0.25, chanfro = 0.22) {
   const g = new THREE.ExtrudeGeometry(shape, {
     depth: profundidade, curveSegments: 32,
@@ -84,7 +84,7 @@ export function criarPeca(tipo, cor) {
   return new THREE.Mesh(new THREE.TorusKnotGeometry(0.7, 0.25, 160, 24), tecido(cor));
 }
 
-// Centraliza o objeto e deixa o maior lado com `tamanho` unidades
+// centraliza e ajusta o tamanho
 export function encaixar(obj, tamanho = 2.4) {
   const caixa = new THREE.Box3().setFromObject(obj);
   const dim = caixa.getSize(new THREE.Vector3());
@@ -96,11 +96,9 @@ export function encaixar(obj, tamanho = 2.4) {
 }
 
 const loader = new GLTFLoader();
-// Link completo (http...) ou caminho absoluto: usa direto. Senão é um arquivo enviado pelo painel,
-// que fica na pasta de mídia (o template passa o prefixo em data-media, que muda na Vercel).
+// link, /static/... ou arquivo enviado pelo painel (pasta media)
 const caminho = (url, media = '/media/') => (url.startsWith('http') || url.startsWith('/') ? url : media + url);
 
-// dados = data-* do HTML: categoria, modelo (.glb opcional), cor (#hex) e seed (cor de reserva)
 export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, tamanho) {
   if (modelo) {
     try {
@@ -110,11 +108,11 @@ export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, t
     }
   }
   const peca = encaixar(criarPeca(tipoDaCategoria(categoria), cor || CORES[seed % CORES.length]), tamanho);
-  peca.userData.gerada = true; // só peça gerada pode trocar de cor (o .glb tem textura própria)
+  peca.userData.gerada = true;
   return peca;
 }
 
-// Troca a cor do tecido de uma peça gerada (usado no painel quando o admin escolhe a cor)
+// troca a cor (painel)
 export function pintar(peca, cor) {
   if (!peca.userData.gerada) return;
   peca.traverse(m => {
@@ -131,7 +129,7 @@ export function criarRenderer(canvas, opcoes = {}, maxPixelRatio = 2) {
   return r;
 }
 
-// Cena com luz de estúdio (reflexos suaves) + uma luz direcional
+// cena com iluminação
 export function criarCena(renderer) {
   const cena = new THREE.Scene();
   cena.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer), 0.04).texture;

@@ -17,7 +17,6 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".vercel.app"]
 CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]
-# Em produção (Vercel, https) os cookies de login só trafegam criptografados
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = not DEBUG
 
 
@@ -34,7 +33,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # serve o static/ (precisa vir logo depois)
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -74,10 +73,7 @@ DATABASES = {
     }
 }
 
-# Qual banco usar (decidido pelas variáveis de ambiente / .env):
-#   DATABASE_URL -> PostgreSQL do Supabase (deploy na Vercel)
-#   DB_NAME      -> MySQL local (o que o professor avalia)
-#   nenhum       -> SQLite (db.sqlite3)
+# DATABASE_URL = Supabase, DB_NAME = MySQL local, senão SQLite
 if os.getenv("DATABASE_URL"):
     url = urlparse(os.environ["DATABASE_URL"])
     DATABASES["default"] = {
@@ -88,12 +84,11 @@ if os.getenv("DATABASE_URL"):
         "HOST": url.hostname,
         "PORT": url.port or 5432,
         "OPTIONS": {"sslmode": "require"},
-        # O pooler do Supabase (porta 6543) não aceita cursores do lado do servidor
+        # exigido pelo pooler do Supabase
         "DISABLE_SERVER_SIDE_CURSORS": True,
     }
 elif os.getenv("DB_NAME"):
-    # PyMySQL é Python puro (instala em qualquer lugar). O Django pede o mysqlclient 2.2.1+,
-    # então o PyMySQL se apresenta como ele.
+    # PyMySQL no lugar do mysqlclient
     import pymysql
     pymysql.version_info = (2, 2, 1, "final", 0)
     pymysql.install_as_MySQLdb()
@@ -144,9 +139,8 @@ STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-WHITENOISE_USE_FINDERS = True  # serve o CSS/JS/fotos direto da pasta static/
+WHITENOISE_USE_FINDERS = True
 
-# Fotos e .glb enviados pelo painel
-# Na Vercel não existe pasta media: lá MEDIA_URL=/static/img/ faz as fotos virem de static/img/produtos
+# uploads (na Vercel o MEDIA_URL vem do ambiente)
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = BASE_DIR / "media"

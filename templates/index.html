@@ -4,7 +4,6 @@
 {% block conteudo %}
 <section class="hero" aria-labelledby="hero-titulo">
   <canvas id="hero-3d" role="img" aria-label="As peças em destaque, em 3D"></canvas>
-  {# dados das peças que caem no hero (o hero.js lê daqui) #}
   <ul id="hero-pecas" hidden>
     {% for p in destaques %}
       <li data-categoria="{{ p.categoria }}" data-cor="{{ p.cor }}" data-modelo="{{ p.modelo_3d|default:'' }}" data-media="{% get_media_prefix %}"></li>

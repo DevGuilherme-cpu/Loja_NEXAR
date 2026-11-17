@@ -1,18 +1,17 @@
-// Movimento global. Regra da casa: só o hero anima sozinho; o resto responde ao que a pessoa faz.
-// A troca entre páginas é feita pelo navegador (View Transitions no style.css).
+// Animações gerais do site
 (() => {
   const anima = window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches;
   const temMouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  if (!anima) return; // sem GSAP ou com "menos movimento" ligado: a página funciona parada
+  if (!anima) return;
 
-  // rolagem suave (data-lenis-prevent nos canvas 3D deixa a roda do mouse dar zoom)
+  // rolagem suave
   if (window.Lenis) {
     const lenis = new Lenis({ lerp: 0.12 });
     gsap.ticker.add(t => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);
   }
 
-  // título do hero: letras sobem de dentro de cada palavra
+  // título do hero
   document.querySelectorAll('[data-split]').forEach(el => {
     const texto = el.textContent.trim();
     el.setAttribute('aria-label', texto);
@@ -32,9 +31,9 @@
     gsap.from(el.querySelectorAll('.l'), { yPercent: 115, duration: 1, ease: 'expo.out', stagger: 0.025, delay: 0.9 });
   });
 
-  if (!temMouse) return; // os efeitos abaixo dependem de um mouse de verdade
+  if (!temMouse) return;
 
-  // cards inclinam em 3D na direção do mouse
+  // tilt nos cards
   let ultimo = null;
   document.addEventListener('pointermove', e => {
     const img = e.target.closest?.('.card-img');
@@ -48,7 +47,7 @@
     img.style.setProperty('--rx', `${-y * 10}deg`);
   });
 
-  // categorias: a foto da categoria segue o cursor
+  // prévia da foto nas categorias
   const lista = document.querySelector('.cats');
   if (!lista) return;
   const previa = document.createElement('img');
