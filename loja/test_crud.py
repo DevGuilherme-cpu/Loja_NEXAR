@@ -1,6 +1,6 @@
 """CRUD do painel (produtos, categorias e uploads). Rodar com: python manage.py test loja
 
-Uploads vão para um MEDIA_ROOT temporário (apagado no fim). Ids sempre vêm do banco.
+Uploads vão para um MEDIA_ROOT temporário próprio de cada classe (apagado no fim). Ids sempre vêm do banco.
 """
 import shutil
 import tempfile
@@ -15,9 +15,7 @@ from django.urls import reverse
 from PIL import Image
 
 from .models import Categoria, Pedido, Produto
-
-MEDIA_TEMP = tempfile.mkdtemp(prefix="nexar_test_media_")
-GLB_MINIMO = b"glTF" + (2).to_bytes(4, "little") + (20).to_bytes(4, "little") + b"\x00" * 8
+from .test_glb import GLB_MINIMO  # GLB 2.0 válido gerado em código
 
 
 def png(nome="foto.png", extra=0):
@@ -30,16 +28,24 @@ def glb(nome="peca.glb", conteudo=GLB_MINIMO):
     return SimpleUploadedFile(nome, conteudo, content_type="model/gltf-binary")
 
 
-def arquivos_em_media():
-    return sorted(p.relative_to(MEDIA_TEMP).as_posix() for p in Path(MEDIA_TEMP).rglob("*") if p.is_file())
-
-
-@override_settings(MEDIA_ROOT=MEDIA_TEMP)
 class CrudBase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # MEDIA_ROOT temporário exclusivo desta classe (cada subclasse ganha o seu)
+        cls.media_temp = tempfile.mkdtemp(prefix="nexar_test_media_")
+        cls._media_override = override_settings(MEDIA_ROOT=cls.media_temp)
+        cls._media_override.enable()
+        super().setUpClass()
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        shutil.rmtree(MEDIA_TEMP, ignore_errors=True)
+        cls._media_override.disable()
+        shutil.rmtree(cls.media_temp, ignore_errors=True)
+
+    def arquivos_em_media(self):
+        raiz = Path(self.media_temp)
+        return sorted(p.relative_to(raiz).as_posix() for p in raiz.rglob("*") if p.is_file())
 
     @classmethod
     def setUpTestData(cls):
@@ -53,8 +59,8 @@ class CrudBase(TestCase):
         )
 
     def setUp(self):
-        shutil.rmtree(MEDIA_TEMP, ignore_errors=True)
-        Path(MEDIA_TEMP).mkdir(parents=True, exist_ok=True)
+        shutil.rmtree(self.media_temp, ignore_errors=True)
+        Path(self.media_temp).mkdir(parents=True, exist_ok=True)
 
     def dados(self, **extra):
         d = {"nome": "Camiseta Nova", "descricao": "Algodão", "preco": "89.90", "estoque": "7",
@@ -82,7 +88,7 @@ class ProdutoCrudTest(CrudBase):
         self.assertTrue(p.imagem_2.name.startswith("produtos/"))
         self.assertTrue(p.modelo_3d.name.startswith("modelos/") and p.modelo_3d.name.endswith(".glb"))
         for campo in (p.imagem, p.imagem_2, p.modelo_3d):
-            self.assertTrue((Path(MEDIA_TEMP) / campo.name).is_file(), campo.name)
+            self.assertTrue((Path(self.media_temp) / campo.name).is_file(), campo.name)
 
     def test_edicao_muda_nome_e_preco_e_mantem_arquivos(self):
         url = reverse("loja:painel_produto_editar", args=[self.prod.id])
@@ -96,7 +102,7 @@ class ProdutoCrudTest(CrudBase):
         self.assertEqual((p.nome, p.preco), ("Moletom Renomeado", Decimal("149.50")))
         self.assertEqual(p.imagem.name, "produtos/base.jpg")
         self.assertEqual(p.modelo_3d.name, "/static/modelos/tenis.glb")
-        self.assertEqual(arquivos_em_media(), [])
+        self.assertEqual(self.arquivos_em_media(), [])
 
     def test_edicao_troca_modelo_enviado(self):
         url = reverse("loja:painel_produto_editar", args=[self.prod.id])
@@ -129,7 +135,7 @@ class ProdutoCrudTest(CrudBase):
                     if nome_caso != "nome vazio":
                         self.assertContains(r, 'value="Camiseta Nova"')
                     self.assertEqual(list(Produto.objects.values_list("id", "nome", "preco", "estoque")), antes)
-                    self.assertEqual(arquivos_em_media(), [])
+                    self.assertEqual(self.arquivos_em_media(), [])
 
     def test_valores_digitados_no_html(self):
         r = self.client.post(reverse("loja:painel_produto_novo"),
@@ -235,7 +241,7 @@ class SemPermissaoTest(CrudBase):
         self.client.post(reverse("loja:painel_categoria_editar", args=[self.cat.id]), {"nome": "Trocada"})
         self.client.post(reverse("loja:painel_categoria_excluir", args=[self.cat2.id]))
         self.assertEqual(self.estado(), antes)
-        self.assertEqual(arquivos_em_media(), [])
+        self.assertEqual(self.arquivos_em_media(), [])
 
     def test_visitante(self):
         self.tentar_tudo()

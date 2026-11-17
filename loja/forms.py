@@ -1,9 +1,11 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import AdminUserCreationForm, UserChangeForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.db.models.functions import Lower, Trim
 
+from .glb import validar_glb
 from .models import Categoria, Produto
 
 # Política de e-mail (vale para o cadastro da loja e para o /admin/):
@@ -89,6 +91,14 @@ IMAGEM_MAX_MB = 5
 MODELO_MAX_MB = 15
 CATEGORIA_REPETIDA = "Já existe uma categoria com este nome."
 COR_REGEX = r"^#[0-9A-Fa-f]{6}$"
+CAMPOS_ARQUIVO = ("imagem", "imagem_2", "modelo_3d")
+UPLOADS_DESATIVADOS = ("Envio de arquivos está desativado neste ambiente (a hospedagem não guarda arquivos). "
+                       "Os demais campos podem ser salvos sem anexos.")
+
+
+def uploads_habilitados():
+    """settings.UPLOADS_HABILITADOS (False na Vercel: disco efêmero e corpo da requisição ~4,5 MB)."""
+    return getattr(settings, "UPLOADS_HABILITADOS", True)
 
 
 def enviado_agora(arquivo):
@@ -126,6 +136,9 @@ class ProdutoForm(forms.ModelForm):
 
     def clean(self):
         dados = super().clean()
+        # nunca ignorar em silêncio um arquivo enviado quando o ambiente não guarda uploads
+        if not uploads_habilitados() and any(self.files.get(c) for c in CAMPOS_ARQUIVO):
+            self.add_error(None, forms.ValidationError(UPLOADS_DESATIVADOS, code="uploads_desativados"))
         if dados.get("cor_automatica"):
             dados["cor"] = ""
             self.errors.pop("cor", None)  # cor ignorada quando a automática está marcada
@@ -155,11 +168,7 @@ class ProdutoForm(forms.ModelForm):
             raise forms.ValidationError("O modelo 3D precisa ser um arquivo .glb.", code="extensao")
         if arquivo.size > MODELO_MAX_MB * 1024 * 1024:
             raise forms.ValidationError(f"O modelo 3D pode ter no máximo {MODELO_MAX_MB} MB.", code="grande")
-        arquivo.seek(0)
-        cabecalho = arquivo.read(4)
-        arquivo.seek(0)
-        if cabecalho != b"glTF":
-            raise forms.ValidationError("Arquivo .glb inválido: não é um glTF binário (glTF 2.0).", code="cabecalho")
+        validar_glb(arquivo, MODELO_MAX_MB * 1024 * 1024)  # estrutura GLB 2.0 (ver loja/glb.py)
         return arquivo
 
 
