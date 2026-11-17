@@ -46,7 +46,7 @@ Implementação feita em paralelo por outro agente; descrição do comportamento
 
 | Aspecto | Comportamento |
 |---|---|
-| Chave | `UPLOADS_HABILITADOS = False` quando a variável de ambiente `VERCEL` existe; `True` em qualquer outro ambiente (local/MySQL). |
+| Chave | `UPLOADS_HABILITADOS` (regra em `loja/uploads.py`): ligado **só com `DEBUG=True` e sem a variável `VERCEL`**; em produção (`DEBUG=False`) fica desligado mesmo que a Vercel não exponha `VERCEL=1`. A variável de ambiente `UPLOADS_HABILITADOS=True/False` sempre vence. Validado no navegador local com `UPLOADS_HABILITADOS=False`: aviso visível, inputs desabilitados, POST forçado com arquivo recusado (200 com erro), edição sem arquivo salva. |
 | O que o usuário vê | Aviso no formulário do produto explicando que envio de arquivos está desativado na versão publicada; campos de arquivo desabilitados. Os demais campos (nome, preço, estoque, categoria, cor) continuam editáveis. |
 | O que o servidor faz | Recusa explícita (erro de formulário, sem 500) se chegar arquivo com uploads desligados. Não apaga nem troca o arquivo atual: imagens/modelos existentes são preservados. |
 | Limite real | A recusa no servidor só acontece para POST ≤ 4,5 MB; acima disso a Vercel responde 413 antes do Django. Por isso o aviso/desabilitar na interface é o que evita a tela de erro. |

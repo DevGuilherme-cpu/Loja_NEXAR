@@ -61,7 +61,7 @@ Nenhum dos dois foi revisado ou mergeado.
 | `DATABASE_URL` | PostgreSQL do Supabase (pooler) | Ganha de `DB_NAME`. |
 | `MEDIA_URL` | `/static/img/` em produção | |
 | `DB_SSLMODE` | padrão `require` (já no #5) | Não precisa ser criada. |
-| `VERCEL` | definida pela própria Vercel (`VERCEL=1`, build e runtime) | Usada pela opção B para desligar uploads. Depende de "Enable access to System Environment Variables" estar marcada. [Doc](https://vercel.com/docs/environment-variables/system-environment-variables) |
+| `VERCEL` | definida pela própria Vercel (`VERCEL=1`, build e runtime) | Reforço da opção B. O desligamento principal vem de `DEBUG=False` (não depende desta variável). [Doc](https://vercel.com/docs/environment-variables/system-environment-variables) |
 | `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` | MySQL local | Não devem existir na Vercel. |
 
 ### Preview × banco de produção — **verificação pendente**
