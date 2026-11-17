@@ -4,13 +4,15 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login
+from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import CadastroForm
+from .forms import EMAIL_REPETIDO, CadastroForm
 from .models import Categoria, Pedido, Produto
 
 # select_related("categoria") = JOIN com categorias numa consulta só (o card mostra o nome da categoria)
@@ -67,15 +69,34 @@ def destino_seguro(request):
     return settings.LOGIN_REDIRECT_URL
 
 
+def explicar_colisao(form):
+    """IntegrityError no cadastro: descobre qual campo colidiu e mostra no formulário."""
+    username = form.cleaned_data.get("username")
+    email = form.cleaned_data.get("email")
+    if username and User.objects.filter(username=username).exists():
+        form.add_error("username", "Já existe um usuário com este nome.")
+    elif email and User.objects.filter(email__iexact=email).exists():
+        form.add_error("email", EMAIL_REPETIDO)
+    else:
+        form.add_error(None, "Não foi possível criar a conta. Tente novamente.")
+
+
 def cadastro(request):
     if request.user.is_authenticated:
         return redirect("loja:index")
     form = CadastroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        user = form.save()
-        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        messages.success(request, f"Conta criada! Bem-vindo(a), {user.username}.")
-        return redirect(destino_seguro(request))
+        try:
+            # Duas pessoas podem passar pela validação ao mesmo tempo com o mesmo e-mail/usuário:
+            # quem garante é o banco (índice único). atomic() desfaz só este INSERT.
+            with transaction.atomic():
+                user = form.save()
+        except IntegrityError:
+            explicar_colisao(form)
+        else:
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            messages.success(request, f"Conta criada! Bem-vindo(a), {user.username}.")
+            return redirect(destino_seguro(request))
     return render(request, "cadastro.html", {"form": form, "next": request.POST.get("next") or request.GET.get("next", "")})
 
 
