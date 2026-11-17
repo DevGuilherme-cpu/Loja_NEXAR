@@ -149,3 +149,17 @@ class LinkArquivoTest(TestCase):
 
     def test_vazio(self):
         self.assertIsNone(link_arquivo(Produto().imagem))
+
+
+class RegraUploadsHabilitadosTest(TestCase):
+    """loja.uploads.uploads_habilitados: usada pelo settings para definir UPLOADS_HABILITADOS."""
+
+    def test_combinacoes(self):
+        from .uploads import uploads_habilitados as f
+        self.assertTrue(f(True, {}))                                   # desenvolvimento local
+        self.assertFalse(f(False, {}))                                 # produção sem VERCEL exposta
+        self.assertFalse(f(True, {"VERCEL": "1"}))                     # Vercel mesmo com DEBUG
+        self.assertFalse(f(False, {"VERCEL": "1"}))
+        self.assertTrue(f(False, {"UPLOADS_HABILITADOS": "True"}))     # variável explícita vence
+        self.assertFalse(f(True, {"UPLOADS_HABILITADOS": "False"}))
+        self.assertTrue(f(True, {"VERCEL": "1", "UPLOADS_HABILITADOS": "True"}))

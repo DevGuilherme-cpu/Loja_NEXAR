@@ -152,7 +152,9 @@ WHITENOISE_USE_FINDERS = True
 # uploads (na Vercel o MEDIA_URL vem do ambiente)
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = BASE_DIR / "media"
-# Upload de arquivos pelo painel. A Vercel define VERCEL=1 no runtime: lá o disco não persiste e o corpo
-# da requisição é limitado (~4,5 MB), então o padrão é desligado (o form recusa arquivos com aviso).
-# Pode ser forçado com UPLOADS_HABILITADOS=True/False.
-UPLOADS_HABILITADOS = os.getenv("UPLOADS_HABILITADOS", "False" if os.getenv("VERCEL") else "True") == "True"
+# Upload de arquivos pelo painel: ligado só com DEBUG=True fora da Vercel (o Django só serve MEDIA com
+# DEBUG). Em produção fica desligado mesmo se a Vercel não expuser VERCEL=1; o form recusa arquivos com
+# aviso. A variável UPLOADS_HABILITADOS=True/False sempre vence. Regra em loja/uploads.py.
+from loja.uploads import uploads_habilitados  # noqa: E402 (módulo puro, sem Django)
+
+UPLOADS_HABILITADOS = uploads_habilitados(DEBUG, os.environ)
