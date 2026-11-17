@@ -22,6 +22,7 @@ class Produto(models.Model):
     imagem_2 = models.ImageField(upload_to="produtos/", blank=True)  # aparece no hover do card
     # .glb enviado pelo painel, ou um link https:// direto para o modelo
     modelo_3d = models.FileField(upload_to="modelos/", blank=True, max_length=255)
+    cor = models.CharField(max_length=7, blank=True, help_text="Cor da peça 3D, ex.: #1F2F6B")
     # PROTECT: não deixa apagar categoria que ainda tem produto (o MySQL também barraria pela FK)
     categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT)
 

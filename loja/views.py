@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -40,13 +41,15 @@ def cadastro(request):
 
 # ---------- painel admin ----------
 # A LEITURA já vem do banco. shortcut: salvar/excluir ainda não gravam nada.
-# Eliton: fazer o CRUD de verdade (INSERT/UPDATE/DELETE) e proteger com @staff_member_required.
+# Eliton: fazer o CRUD de verdade (INSERT/UPDATE/DELETE). O painel já exige login de administrador.
 
+@staff_member_required
 def painel_produtos(request):
     busca = request.GET.get("busca", "").strip()
     return render(request, "painel/produtos.html", {"produtos": filtrar(busca), "busca": busca})
 
 
+@staff_member_required
 def painel_produto_form(request, id=None):
     produto = get_object_or_404(PRODUTOS, id=id) if id is not None else None
     if request.method == "POST":
@@ -55,30 +58,35 @@ def painel_produto_form(request, id=None):
     return render(request, "painel/produto_form.html", {"produto": produto})
 
 
+@staff_member_required
 @require_POST
 def painel_produto_excluir(request, id):
     messages.error(request, "Exclusão simulada: ainda não apaga do banco.")
     return redirect("loja:painel_produtos")
 
 
+@staff_member_required
 def painel_categorias(request):
     # SELECT categorias.*, COUNT(produtos.id) ... LEFT JOIN produtos ... GROUP BY categorias.id
     lista = Categoria.objects.annotate(total=Count("produto"))
     return render(request, "painel/categorias.html", {"lista": lista})
 
 
+@staff_member_required
 @require_POST
 def painel_categoria_salvar(request, id=None):  # sem id = nova, com id = editar
     messages.info(request, "Salvar simulado: ainda não grava no banco.")
     return redirect("loja:painel_categorias")
 
 
+@staff_member_required
 @require_POST
 def painel_categoria_excluir(request, id):
     messages.error(request, "Exclusão simulada: ainda não apaga do banco.")
     return redirect("loja:painel_categorias")
 
 
+@staff_member_required
 def painel_pedidos(request):
     # O JOIN do trabalho: pedidos + auth_user + produtos + categorias numa consulta só
     pedidos = Pedido.objects.select_related("usuario", "produto__categoria")
