@@ -126,6 +126,8 @@ AUTH_PASSWORD_VALIDATORS = [
 LOGIN_URL = "loja:entrar"
 LOGIN_REDIRECT_URL = "loja:index"
 LOGOUT_REDIRECT_URL = "loja:index"
+# testes gravam a mídia num diretório temporário (nunca no media/ real)
+TEST_RUNNER = "config.test_runner.MediaIsoladaRunner"
 
 
 # Internationalization
