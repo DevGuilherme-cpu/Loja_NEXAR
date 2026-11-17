@@ -68,7 +68,8 @@ def devolver_token_pedido(request, token):
 
 def inteiro_ascii(texto):
     """Só 0-9: str.isdigit() aceita "²" e "١", que fariam int() falhar ou aceitar dígitos estranhos."""
-    return texto.isascii() and texto.isdigit()
+    # len <= 9: o Python recusa int() de textos com mais de 4300 dígitos (seria erro 500)
+    return texto.isascii() and texto.isdigit() and len(texto) <= 9
 
 
 def produto(request, id):

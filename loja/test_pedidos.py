@@ -127,7 +127,7 @@ class InvalidosTests(PedidoBase):
         self.assertNadaMudou()
 
     def test_produto_id_gigante_404(self):
-        self.assertEqual(self.comprar(produto_id="9" * 30).status_code, 404)
+        self.assertEqual(self.comprar(produto_id="9" * 9).status_code, 404)  # id válido mas inexistente
         self.assertNadaMudou()
 
     def test_produto_id_nao_numerico(self):
@@ -274,3 +274,17 @@ class UltimaPecaConcorrenteTests(TransactionTestCase):
         self.assertEqual(status, [302, 302])
         self.assertEqual(Pedido.objects.filter(produto=produto).count(), 1)
         self.assertEqual(Produto.objects.get(id=produto.id).estoque, 0)
+
+
+class NumeroGiganteTests(PedidoBase):
+    """QA: textos com milhares de dígitos não podem virar erro 500."""
+
+    def test_quantidade_gigante(self):
+        r = self.comprar(quantidade="9" * 5000)
+        self.assertEqual(r.status_code, 302)
+        self.assertNadaMudou()
+
+    def test_produto_id_gigante(self):
+        r = self.comprar(produto_id="9" * 5000)
+        self.assertEqual(r.status_code, 302)
+        self.assertNadaMudou()
