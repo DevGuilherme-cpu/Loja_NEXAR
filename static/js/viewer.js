@@ -1,4 +1,4 @@
-// Visualizador 3D (produto, login, cadastro e painel): arrastar gira, roda do mouse/pinça aproxima.
+// Visualizador 3D
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { criarRenderer, criarCena, criarModelo, pintar } from './pecas.js';
@@ -17,9 +17,9 @@ Object.assign(controles, {
   enableDamping: true, enablePan: false, minDistance: 3.5, maxDistance: 10,
   autoRotate: anima, autoRotateSpeed: 1.5,
 });
-canvas.style.touchAction = 'pan-y'; // no celular, arrastar na vertical continua rolando a página
+canvas.style.touchAction = 'pan-y';
 controles.addEventListener('start', () => {
-  controles.autoRotate = false; // parou de girar sozinho quando a pessoa mexe
+  controles.autoRotate = false;
   palco.querySelector('.pdp-dica')?.remove();
 });
 
@@ -39,7 +39,7 @@ renderer.setAnimationLoop(() => {
   renderer.render(cena, camera);
 });
 
-// ---------- 3D / fotos ----------
+// troca entre 3D e fotos
 const botoes = [...document.querySelectorAll('.pdp-vistas button')];
 let escolheu = false;
 function mostrar(vista) {
@@ -48,7 +48,7 @@ function mostrar(vista) {
 }
 botoes.forEach(b => b.addEventListener('click', () => { escolheu = true; mostrar(b.dataset.vista); }));
 
-// Entrada: a foto se desfaz e a peça aparece dando uma volta inteira, desacelerando
+// entrada
 function entrar() {
   mostrar('3d');
   if (anima) gsap.from(peca.rotation, { y: -Math.PI * 2, duration: 1.6, ease: 'expo.out' });
@@ -56,7 +56,7 @@ function entrar() {
 if (palco.dataset.vista === '3d') entrar();
 else if (anima) setTimeout(() => { if (!escolheu) entrar(); }, 900);
 
-// ---------- o tamanho escolhido muda o tamanho da peça ----------
+// tamanho muda a escala
 const ESCALA = { P: 0.9, M: 1, G: 1.08, GG: 1.16 };
 const base = peca.scale.x;
 document.querySelectorAll('input[name="tamanho"]').forEach(radio => {
@@ -67,11 +67,11 @@ document.querySelectorAll('input[name="tamanho"]').forEach(radio => {
   });
 });
 
-// ---------- comprar: a peça dá uma volta antes de enviar ----------
+// animação do comprar
 const form = document.querySelector('.pdp-form');
 form?.addEventListener('submit', e => {
   if (!anima || form.dataset.enviando) return;
-  e.preventDefault(); // o navegador já validou os campos antes de chegar aqui
+  e.preventDefault();
   form.dataset.enviando = '1';
   palco.dataset.vista = '3d';
   gsap.timeline({ onComplete: () => form.submit() })
@@ -79,5 +79,5 @@ form?.addEventListener('submit', e => {
     .to(peca.position, { y: 0.35, duration: 0.4, yoyo: true, repeat: 1, ease: 'power2.out' }, 0);
 });
 
-// ---------- painel: escolher a cor pinta o 3D na hora ----------
+// cor no painel
 document.querySelector('input[name="cor"]')?.addEventListener('input', e => pintar(peca, e.target.value));

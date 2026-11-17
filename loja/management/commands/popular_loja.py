@@ -1,8 +1,4 @@
-"""Cadastra os dados de exemplo da NEXAR: python manage.py popular_loja
-
-Cria 5 categorias, 9 produtos (com as fotos do Pexels), 5 clientes e 5 pedidos,
-cumprindo o "mínimo de 5 registros por tabela" do trabalho.
-"""
+"""python manage.py popular_loja: cadastra categorias, produtos, clientes e pedidos de exemplo."""
 import shutil
 from decimal import Decimal
 
@@ -19,13 +15,13 @@ from loja.models import Categoria, Pedido, Produto
 class Command(BaseCommand):
     help = "Cadastra categorias, produtos, clientes e pedidos de exemplo."
 
-    @transaction.atomic  # se algo der errado no meio, nada fica pela metade no banco
+    @transaction.atomic
     def handle(self, *args, **opcoes):
         if Produto.objects.exists():
             self.stdout.write(self.style.WARNING("O banco já tem produtos. Nada foi alterado."))
             return
 
-        # As fotos ficam em static/img/produtos; o ImageField guarda em media/produtos
+        # copia as fotos para media/produtos
         origem = settings.BASE_DIR / "static" / "img" / "produtos"
         destino = settings.MEDIA_ROOT / "produtos"
         destino.mkdir(parents=True, exist_ok=True)
@@ -47,11 +43,11 @@ class Command(BaseCommand):
             )
 
         for ped in PEDIDOS:
-            # clientes de exemplo, sem senha (não conseguem entrar); o admin se cria com createsuperuser
+            # clientes de exemplo (sem senha)
             cliente, _ = User.objects.get_or_create(username=ped["cliente"])
             pedido = Pedido.objects.create(usuario=cliente, produto=produtos[ped["produto"]],
                                            tamanho=ped["tamanho"], quantidade=ped["quantidade"])
-            # a data é automática (auto_now_add); aqui voltamos para a data do exemplo
+            # volta a data do exemplo
             Pedido.objects.filter(pk=pedido.pk).update(data=timezone.make_aware(ped["data"]))
 
         self.stdout.write(self.style.SUCCESS(

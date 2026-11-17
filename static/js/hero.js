@@ -1,17 +1,15 @@
-// Hero da home: as peças em destaque caem no palco achatadas e inflam ao pousar.
-// Depois flutuam, seguem o mouse e sobem/giram quando a página rola.
+// Hero da home: peças em destaque caindo no palco
 import * as THREE from 'three';
 import { criarRenderer, criarCena, criarModelo } from './pecas.js';
 
 const canvas = document.getElementById('hero-3d');
 const anima = window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-const renderer = criarRenderer(canvas, {}, 1.5); // tela cheia: 1.5x basta e não engasga no projetor
+const renderer = criarRenderer(canvas, {}, 1.5);
 const cena = criarCena(renderer);
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
 camera.position.z = 9;
 
-// [x, y, z, tamanho] de cada peça. As peças ficam onde o título não está:
-// tela larga = metade direita; tablet = faixa de cima; celular = bloco 2x2 em cima.
+// [x, y, z, tamanho] de cada peça para cada tipo de tela
 const LAYOUT = {
   largo: [[0.55, 1.2, -0.6, 1.8], [2.35, 0.45, 0.4, 2.5], [3.95, 1.3, -0.4, 1.75], [1.05, -1.3, -0.9, 1.55]],
   medio: [[-2.55, 1.55, -0.5, 1.45], [-0.85, 1.7, 0.3, 1.75], [0.95, 1.5, 0, 1.6], [2.65, 1.7, -0.6, 1.45]],
@@ -23,7 +21,7 @@ const grupo = new THREE.Group();
 cena.add(grupo);
 const dados = [...document.querySelectorAll('#hero-pecas li')].slice(0, 4).map(li => ({ ...li.dataset }));
 const pecas = await Promise.all(dados.map(async (d, i) => {
-  const suporte = new THREE.Group(); // o suporte anda e estica; a peça dentro fica com a escala certa
+  const suporte = new THREE.Group();
   suporte.add(await criarModelo({ ...d, seed: i }, 1));
   suporte.userData.fase = i * 1.7;
   grupo.add(suporte);
@@ -50,7 +48,7 @@ function posicionar() {
 new ResizeObserver(posicionar).observe(canvas);
 posicionar();
 
-// ---------- a queda: o único momento que acontece sozinho na página ----------
+// animação de entrada
 let pousou = !anima;
 if (anima) {
   pecas.forEach(p => { p.position.y += 7; p.scale.set(1.15, 1, 0.04); p.rotation.set(0.6, -0.8, 0.3); });
@@ -60,7 +58,7 @@ if (anima) {
     .to(pecas.map(p => p.scale), { x: 1, z: 1, duration: 1.3, ease: 'elastic.out(1, 0.45)', stagger: 0.14 }, 0.75);
 }
 
-// ---------- depois: flutua, segue o mouse e reage à rolagem ----------
+// loop
 const mouse = { x: 0, y: 0 };
 addEventListener('pointermove', e => {
   mouse.x = (e.clientX / innerWidth) * 2 - 1;
@@ -81,7 +79,6 @@ renderer.setAnimationLoop(() => {
       p.rotation.y = Math.sin(t * 0.35 + f) * 0.35;
     });
   }
-  // o "+= (alvo - atual) * 0.06" deixa o movimento macio, sem tranco
   grupo.rotation.x += (mouse.y * 0.18 + rolagem * 0.5 - grupo.rotation.x) * 0.06;
   grupo.rotation.y += (mouse.x * 0.35 - grupo.rotation.y) * 0.06;
   grupo.position.y = rolagem * 2.2;

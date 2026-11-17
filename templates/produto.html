@@ -5,7 +5,6 @@
 
 {% block conteudo %}
 <section class="pdp">
-  {# chega mostrando a foto (continua a animação do card) e logo vira a peça em 3D #}
   <div class="pdp-3d" data-vista="{% if produto.imagem %}foto1{% else %}3d{% endif %}" style="view-transition-name: produto-{{ produto.id }}">
     <canvas id="viewer-3d" role="img" aria-label="{{ produto.nome }} em 3D. Arraste para girar." data-lenis-prevent
             data-id="{{ produto.id }}" data-categoria="{{ produto.categoria }}" data-modelo="{{ produto.modelo_3d|default:'' }}"
@@ -31,7 +30,7 @@
     <p class="pdp-preco">R$ {{ produto.preco|floatformat:2 }}</p>
     <p class="pdp-desc">{{ produto.descricao }}</p>
 
-    {# Eliton: troque action="" pela rota que grava o pedido, ex.: {% url 'loja:pedido' %} #}
+    {# TODO: action com a rota do pedido #}
     <form class="pdp-form" method="post" action="">
       {% csrf_token %}
       <input type="hidden" name="produto_id" value="{{ produto.id }}">
