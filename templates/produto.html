@@ -45,7 +45,6 @@
       </div>
     </div>
 
-    {# TODO: action com a rota do pedido #}
     <form class="pdp-form" method="post" action="{% url 'loja:pedido' %}">
       {% csrf_token %}
       {% if token_pedido %}<input type="hidden" name="token_pedido" value="{{ token_pedido }}">{% endif %}
