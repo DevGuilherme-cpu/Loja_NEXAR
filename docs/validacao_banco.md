@@ -211,3 +211,27 @@ nunca foi executado.
   (`AUTO_INCREMENT`, `ENGINE=InnoDB`, `TINYINT(1)`), e reescrevê-lo não valida o arquivo entregue.
 - Diferença conhecida e aceitável: no Django a coluna `cor` não tem DEFAULT no banco (o default
   vazio é aplicado pelo Django); no script o `DEFAULT ''` foi mantido por ser só demonstração.
+
+---
+
+## Revalidação do coordenador — 17/11/2026 (índice com TRIM)
+
+Motivo: o QA independente mostrou que `NULLIF(LOWER(email), '')` aceitava `" a@x.com"` ao lado de
+`a@x.com`. A 0005 (ainda não publicada) passou a usar `NULLIF(LOWER(TRIM(email)), '')`, e a validação
+do formulário compara `LOWER(TRIM(email))` (pega também contas antigas com espaços).
+As saídas acima com `NULLIF(lower(email::text), ...)` são da versão anterior.
+
+Ambiente: container descartável `postgres:17-alpine` (`nexar-pg-coord`, 127.0.0.1:55434,
+`DB_SSLMODE=disable`), PostgreSQL **17.11** (`server_version` 170011), código da `backend-base` com a correção.
+
+| Passo | Resultado |
+|---|---|
+| `migrate` do zero + `popular_loja` | OK — 5 categorias, 9 produtos, 5 usuários, 5 pedidos |
+| `\d auth_user` | `"auth_user_email_ci_uniq" UNIQUE, btree (NULLIF(lower(TRIM(BOTH FROM email)), ''::text))` |
+| INSERT `a@x.com` + dois e-mails `''` | aceito (`INSERT 0 3`) |
+| INSERT `' A@X.com '` | `ERROR: duplicate key value violates unique constraint "auth_user_email_ci_uniq"` |
+| `migrate loja 0004` (reverse) | índice removido (`pg_indexes` → 0) |
+| `migrate` (reaplicar) | índice recriado com a mesma definição |
+| `manage.py test loja --noinput` | **Ran 57 tests — OK** |
+
+O container foi parado (`--rm`). Nenhum banco remoto foi acessado.

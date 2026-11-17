@@ -204,3 +204,24 @@ class MigrationEmailUnicoTest(TransactionTestCase):
         self.migrar(self.depois)
         with self.assertRaises(IntegrityError), transaction.atomic():
             User.objects.create(username="d", email="UM@x.com")
+
+
+class EmailComEspacosTest(TestCase):
+    """O índice e a validação comparam LOWER(TRIM(email)): espaços nas pontas não driblam a regra."""
+
+    def test_indice_barra_email_com_espacos(self):
+        from django.db import IntegrityError, transaction
+        User.objects.create_user("um", email="a@x.com")
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            User.objects.create_user("dois", email=" A@x.com ")
+
+    def test_cadastro_detecta_conta_antiga_com_espacos(self):
+        # conta antiga gravada antes da normalização (sem passar pelo form): sem índice
+        # ela não existiria junto de outra igual, mas pode ser a única com espaços
+        User.objects.create_user("antiga", email="Ana@X.com ")
+        r = self.client.post(reverse("loja:cadastro"), {
+            "username": "nova", "email": "ana@x.com",
+            "password1": "Nexar-teste-2026", "password2": "Nexar-teste-2026"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Já existe uma conta com este e-mail.")
+        self.assertFalse(User.objects.filter(username="nova").exists())

@@ -1,7 +1,7 @@
 """E-mail único sem diferenciar maiúsculas/minúsculas (contas com e-mail preenchido).
 
-Cria um índice único funcional em auth_user sobre NULLIF(LOWER(email), ''):
-- e-mails que diferem só na caixa colidem;
+Cria um índice único funcional em auth_user sobre NULLIF(LOWER(TRIM(email)), ''):
+- e-mails que diferem só na caixa ou em espaços nas pontas colidem;
 - e-mail vazio vira NULL no índice, e NULLs não conflitam (SQLite, PostgreSQL, MySQL 8.0.13+),
   então contas sem e-mail (demonstrativas, createsuperuser) continuam permitidas.
 
@@ -13,7 +13,7 @@ Protege também caminhos que não passam pelos forms: createsuperuser, shell/ORM
 """
 from django.db import migrations
 from django.db.models import Count
-from django.db.models.functions import Lower
+from django.db.models.functions import Lower, Trim
 
 INDICE = "auth_user_email_ci_uniq"
 
@@ -31,8 +31,8 @@ def verificar_duplicados(apps, schema_editor):
     User = apps.get_model("auth", "User")
     repetidos = list(
         User.objects.using(schema_editor.connection.alias)
-        .exclude(email="")
-        .annotate(email_ci=Lower("email"))
+        .annotate(email_ci=Lower(Trim("email")))
+        .exclude(email_ci="")
         .values("email_ci")
         .annotate(total=Count("id"))
         .filter(total__gt=1)
@@ -58,7 +58,7 @@ def criar_indice(apps, schema_editor):
     # Parênteses duplos: exigência do MySQL para índice funcional (aceito também por SQLite/PostgreSQL)
     schema_editor.execute(
         f"CREATE UNIQUE INDEX {schema_editor.quote_name(INDICE)} "
-        f"ON {_tabela(apps, schema_editor)} ((NULLIF(LOWER(email), '')))"
+        f"ON {_tabela(apps, schema_editor)} ((NULLIF(LOWER(TRIM(email)), '')))"
     )
 
 

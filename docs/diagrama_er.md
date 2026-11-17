@@ -47,7 +47,7 @@ erDiagram
 
 `auth_user` é a tabela de usuários do próprio Django (aqui aparecem só as colunas principais).
 O e-mail, quando preenchido, é único sem diferenciar maiúsculas/minúsculas (índice
-`auth_user_email_ci_uniq` sobre `NULLIF(LOWER(email), '')`, migration `loja.0005`).
+`auth_user_email_ci_uniq` sobre `NULLIF(LOWER(TRIM(email)), '')`, migration `loja.0005`).
 `produtos.cor` guarda a cor da peça usada no visualizador 3D (migration `loja.0002`).
 
 **Relacionamentos.** Uma categoria tem vários produtos e cada produto pertence a exatamente uma

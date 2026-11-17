@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import EMAIL_REPETIDO, CadastroForm
+from .forms import EMAIL_REPETIDO, CadastroForm, email_em_uso
 from .models import Categoria, Pedido, Produto
 
 # produtos já com a categoria (JOIN)
@@ -74,7 +74,7 @@ def explicar_colisao(form):
     email = form.cleaned_data.get("email")
     if username and User.objects.filter(username=username).exists():
         form.add_error("username", "Já existe um usuário com este nome.")
-    elif email and User.objects.filter(email__iexact=email).exists():
+    elif email and email_em_uso(email):
         form.add_error("email", EMAIL_REPETIDO)
     else:
         form.add_error(None, "Não foi possível criar a conta. Tente novamente.")

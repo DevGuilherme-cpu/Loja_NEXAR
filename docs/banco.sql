@@ -47,7 +47,7 @@ CREATE TABLE auth_user (
 
 -- E-mail único ignorando maiúsculas/minúsculas (migration loja.0005).
 -- E-mail vazio vira NULL no índice, e NULLs não conflitam: contas sem e-mail continuam permitidas.
-CREATE UNIQUE INDEX auth_user_email_ci_uniq ON auth_user ((NULLIF(LOWER(email), '')));
+CREATE UNIQUE INDEX auth_user_email_ci_uniq ON auth_user ((NULLIF(LOWER(TRIM(email)), '')));
 
 -- ---------------------------------------------------------------------
 -- categorias (model Categoria)

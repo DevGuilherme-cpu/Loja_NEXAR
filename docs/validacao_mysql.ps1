@@ -46,7 +46,7 @@ foreach ($nome in @($BancoZero, $BancoMigracao, $BancoScript, $BancoSuite, $DbBa
 
 if (-not $env:MYSQL_USER) { $env:MYSQL_USER = "root" }
 if (-not $env:MYSQL_HOST) { $env:MYSQL_HOST = "127.0.0.1" }
-if (-not $env:MYSQL_PORT) { $env:MYSQL_PORT = "3306" }
+if (-not $env:MYSQL_PORT) { throw "Defina MYSQL_PORT (nesta maquina o servico MySQL80 usa 3306; a skill nexar-banco cita 3307). Nao ha valor padrao para nao conectar na instancia errada." }
 if (-not $env:MYSQL_PASSWORD) {
     $seguro = Read-Host "Senha do MySQL para $($env:MYSQL_USER)" -AsSecureString
     $env:MYSQL_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto(

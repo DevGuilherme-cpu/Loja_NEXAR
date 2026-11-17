@@ -1,13 +1,17 @@
 from django import forms
 from django.contrib.auth.forms import AdminUserCreationForm, UserChangeForm, UserCreationForm
 from django.contrib.auth.models import User
+from django.db.models.functions import Lower, Trim
 
 # Política de e-mail (vale para o cadastro da loja e para o /admin/):
-#  - único sem diferenciar maiúsculas/minúsculas, entre contas com e-mail preenchido;
+#  - único sem diferenciar maiúsculas/minúsculas nem espaços nas pontas, entre contas com e-mail preenchido;
 #  - e-mail vazio continua permitido (contas antigas/demonstrativas, createsuperuser sem e-mail);
 #  - novos valores são gravados com strip() + minúsculas (contas existentes não são alteradas).
 # A garantia final é o índice único auth_user_email_ci_uniq (migration 0005_email_unico):
 # a validação abaixo só dá uma mensagem amigável antes de chegar no banco.
+# Limites conhecidos: createsuperuser/shell não normalizam (o índice ainda barra duplicata, com
+# IntegrityError); no /admin/, dois cadastros simultâneos do mesmo e-mail viram erro 500 no segundo
+# (só a equipe usa o admin; o cadastro da loja trata a corrida e mostra erro no formulário).
 EMAIL_REPETIDO = "Já existe uma conta com este e-mail."
 
 
@@ -18,7 +22,8 @@ def normalizar_email(email):
 def email_em_uso(email, exceto_pk=None):
     if not email:
         return False
-    qs = User.objects.filter(email__iexact=email)
+    # mesma regra do índice da 0005: LOWER(TRIM(email)) (pega também contas antigas com espaços)
+    qs = User.objects.annotate(email_norm=Lower(Trim("email"))).filter(email_norm=email.strip().lower())
     if exceto_pk is not None:
         qs = qs.exclude(pk=exceto_pk)
     return qs.exists()
