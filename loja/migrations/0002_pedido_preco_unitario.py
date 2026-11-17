@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="pedido",
             name="preco_unitario",
-            field=models.DecimalField(decimal_places=2, max_digits=10,
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10,
                                       validators=[django.core.validators.MinValueValidator(0)]),
         ),
         migrations.AlterField(

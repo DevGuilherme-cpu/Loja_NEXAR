@@ -57,7 +57,7 @@
         <a href="{% url 'loja:produtos' %}">Tudo</a>
         {% for c in categorias %}<a href="{% url 'loja:produtos' %}?categoria={{ c.id }}">{{ c.nome }}</a>{% endfor %}
       </div>
-      <div><b>Conta</b>{% if not user.is_authenticated %}<a href="{% url 'loja:entrar' %}">Entrar</a><a href="{% url 'loja:cadastro' %}">Criar conta</a>{% endif %}{% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}</div>
+      <div><b>Conta</b>{% if not user.is_authenticated %}<a href="{% url 'loja:entrar' %}">Entrar</a><a href="{% url 'loja:cadastro' %}">Criar conta</a>{% endif %}{% if user.is_authenticated %}<span>{{ user.get_username }}</span>{% endif %}{% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}</div>
       <div><b>NEXAR</b><span>Projeto acadêmico 2026</span><span>Guilherme &amp; Eliton</span></div>
     </div>
   </footer>

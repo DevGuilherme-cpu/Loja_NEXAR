@@ -21,9 +21,11 @@ class LojaTest(TestCase):
         self.client.force_login(User.objects.create_user("equipe", password="x", is_staff=True))
 
     def test_paginas_abrem(self):
-        for url in ["/", "/produtos/", "/produto/1/", "/entrar/", "/cadastro/"]:
+        # id real do banco (no MySQL/Postgres o auto-increment não volta a 1 entre testes)
+        primeiro = Produto.objects.first().id
+        for url in ["/", "/produtos/", f"/produto/{primeiro}/", "/entrar/", "/cadastro/"]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
-        self.assertEqual(self.client.get("/produto/999/").status_code, 404)
+        self.assertEqual(self.client.get("/produto/999999/").status_code, 404)
         for url in ["/painel/", "/painel/categorias/", "/painel/pedidos/"]:
             self.assertEqual(self.client.get(url).status_code, 302, url)  # visitante vai para o login
         self.entrar_como_staff()
@@ -33,8 +35,10 @@ class LojaTest(TestCase):
     def test_busca_e_filtro(self):
         r = self.client.get("/produtos/", {"busca": "moletom"})
         self.assertEqual([p.nome for p in r.context["produtos"]], ["Moletom Heavy", "Moletom Drop 01"])
-        r = self.client.get("/produtos/", {"categoria": "3"})
-        self.assertTrue(all(p.categoria.nome == "Calças" for p in r.context["produtos"]))
+        calcas = Categoria.objects.get(nome="Calças")
+        r = self.client.get("/produtos/", {"categoria": str(calcas.id)})
+        nomes = [p.nome for p in r.context["produtos"]]
+        self.assertEqual(nomes, ["Calça Cargo Tech", "Calça Wide Denim"])  # lista vazia também falharia
         r = self.client.get("/produtos/", {"categoria": "abc"})  # lixo na URL não quebra a página
         self.assertEqual(r.status_code, 200)
 

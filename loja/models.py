@@ -46,7 +46,9 @@ class Pedido(models.Model):
     quantidade = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     # preço do produto no momento da compra: se o preço do produto mudar depois,
     # o total dos pedidos antigos continua o mesmo
-    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    # blank=True: no admin pode ficar vazio e o save() copia o preço atual do produto
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, blank=True,
+                                         validators=[MinValueValidator(0)])
     data = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -60,6 +62,14 @@ class Pedido(models.Model):
     def __str__(self):
         return f"Pedido {self.id} - {self.usuario} - {self.produto}"
 
+    def save(self, *args, **kwargs):
+        # Sem preço informado (ex.: pedido criado pelo /admin/), grava o preço do produto agora
+        if self.preco_unitario is None and self.produto_id:
+            self.preco_unitario = self.produto.preco
+        super().save(*args, **kwargs)
+
     @property
     def total(self):
+        if self.preco_unitario is None:
+            return None
         return self.preco_unitario * self.quantidade

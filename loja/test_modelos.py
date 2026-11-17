@@ -96,3 +96,17 @@ class MigracaoPrecoUnitarioTest(TransactionTestCase):
 
         pedido = apps_novos.get_model("loja", "Pedido").objects.get(pk=pedido_id)
         self.assertEqual(pedido.preco_unitario, Decimal("129.90"))
+
+
+class PrecoAutomaticoTest(TestCase):
+    """Pedido criado sem preco_unitario (ex.: pelo /admin/) copia o preço do produto."""
+
+    def test_save_preenche_preco_unitario(self):
+
+        cat = Categoria.objects.create(nome="Teste auto")
+        prod = Produto.objects.create(nome="Peça", preco=Decimal("88.50"), estoque=5, categoria=cat)
+        user = User.objects.create_user("auto_preco")
+        pedido = Pedido.objects.create(usuario=user, produto=prod, tamanho="M", quantidade=2)
+        self.assertEqual(pedido.preco_unitario, Decimal("88.50"))
+        self.assertEqual(pedido.total, Decimal("177.00"))
+        self.assertIsNone(Pedido(quantidade=2).total)
