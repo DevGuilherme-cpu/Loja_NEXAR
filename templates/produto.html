@@ -30,10 +30,27 @@
     <p class="pdp-preco">R$ {{ produto.preco|floatformat:2 }}</p>
     <p class="pdp-desc">{{ produto.descricao }}</p>
 
+    <div class="personalizar" hidden>
+      <button type="button" class="btn btn-claro personalizar-abrir" aria-expanded="false" aria-controls="personalizar-painel">Personalizar</button>
+      <div id="personalizar-painel" class="personalizar-painel" hidden>
+        <div class="chips personalizar-partes" role="group" aria-label="O que personalizar"></div>
+        <div class="personalizar-cores" role="group" aria-label="Cor"></div>
+        <label class="campo personalizar-estampa" hidden>Texto da estampa
+          <input type="text" maxlength="14" placeholder="Seu nome" autocomplete="off">
+        </label>
+        <div class="personalizar-acoes">
+          <button type="button" class="link" data-acao="ver">Ver o resultado</button>
+          <button type="button" class="link" data-acao="original">Voltar ao original</button>
+        </div>
+      </div>
+    </div>
+
     {# TODO: action com a rota do pedido #}
     <form class="pdp-form" method="post" action="">
       {% csrf_token %}
       <input type="hidden" name="produto_id" value="{{ produto.id }}">
+      <input type="hidden" name="personalizacao" value="">
+
       <fieldset class="tamanhos">
         <legend>Tamanho</legend>
         <label><input type="radio" name="tamanho" value="P" required><span>P</span></label>

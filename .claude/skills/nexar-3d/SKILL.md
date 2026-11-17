@@ -29,6 +29,18 @@ Nada de CDN: a apresentação tem que funcionar sem internet.
 Para adicionar um tipo novo de peça: contorno 2D em `pecas.js` (metade direita, a esquerda é espelhada),
 `inflar(contorno(...), cor)` e uma regra em `tipoDaCategoria`.
 
+## Personalização (página do produto)
+
+- Camiseta e moletom são montados em **partes** (`peca.userData.partes`): `corpo`, `mangas`,
+  `gola` ou `capuz`, `bolso`, `estampa`. Cada parte tem material próprio, por isso dá para pintar
+  separado. A estampa é um texto desenhado num canvas e colado na frente (`userData.desenhar`).
+- `.glb` com `KHR_materials_variants` (o tênis) vira `peca.userData.variantes`
+  (`nomes`, `padrao`, `parser`); `aplicarVariante(peca, nome)` troca a combinação.
+- O painel (`.personalizar` em `produto.html`) só aparece quando a peça tem partes ou variantes.
+  `VISTAS` em `viewer.js` define onde a câmera para em cada parte (afasta 1.6x no celular).
+- As escolhas vão em JSON no campo escondido `personalizacao` do formulário de compra
+  (ainda não é salvo no banco: precisaria de um campo no `Pedido`).
+
 ## Adicionar produto com modelo .glb
 
 - Fontes gratuitas: Sketchfab (filtro *Downloadable*, baixar **glTF Binary .glb**), CLO-SET Connect, Fab (*Free*).
