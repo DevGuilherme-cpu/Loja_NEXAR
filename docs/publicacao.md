@@ -1,275 +1,259 @@
 # Publicação da NEXAR (Vercel + Supabase)
 
-Roteiro para levar a `backend-base` (login/cadastro/sair, painel só para staff, preço gravado no
-pedido, e-mail único) para produção em https://loja-nexar.vercel.app sem quebrar o site.
+Roteiro para levar os PRs #5 (fases 1–2) e #6 (fase 3, CRUD do painel) para produção em
+https://loja-nexar.vercel.app sem quebrar o site.
 
-Levantamento feito em 16/11/2026, 21:33 (horário de Brasília) = 17/11/2026 00:33 UTC.
-**Revisado em 17/11/2026** pelo coordenador após integrar a `main` até o PR #4 (`e43f96f`) e as
-correções da revisão das fases 1 e 2. Estado local de referência: ver o relatório revisado.
-Legenda: **[verificado]** = conferido por comando/URL; **[inferência]** = conclusão sem acesso direto.
+**Atualizado em 17/11/2026, ≈ 09:45 UTC (06:45 Brasília).**
+Legenda: **[verificado]** = conferido por comando/URL/documentação (comando ou link ao lado);
+**[inferência]** = conclusão sem acesso direto.
 
-> Nada deste documento foi executado contra a Vercel ou o Supabase. Cada passo marcado
-> com [AUTORIZAÇÃO] precisa de autorização explícita de quem é responsável (Guilherme = dono do repositório
-> e do projeto na Vercel; Eliton = quem tem a `DATABASE_URL`).
+> Nada deste documento foi executado contra a Vercel ou o Supabase. Cada passo marcado com
+> **[AUTORIZAÇÃO]** precisa de autorização explícita de quem é responsável (Guilherme = dono do
+> repositório e do projeto na Vercel; Eliton = quem tem a `DATABASE_URL`).
+> **Regra:** nenhuma alteração no banco remoto antes de o código dos PRs estar **revisado e aprovado**.
+
+Uploads de arquivos no deploy: ver `docs/uploads_deploy.md` (opção B: desligados na Vercel).
 
 ---
 
-## 1. Como o projeto roda na Vercel
+## 1. Estado dos PRs
+
+`gh pr view 5|6 -R DevGuilherme-cpu/Loja_NEXAR --json state,baseRefName,headRefOid,reviewDecision,reviews,mergeable`
+e `gh pr checks` em 17/11/2026 09:45 UTC:
+
+| PR | Base ← head | Head | Estado | Revisão | Checks |
+|---|---|---|---|---|---|
+| #5 Backend fases 1 e 2 | `main` ← `backend-base` | `4ef3c46` | aberto, `MERGEABLE` | **nenhuma** (`reviews: []`) | 2/2 ok (Vercel) |
+| #6 Fase 3: CRUD do painel | `backend-base` ← `fase3-crud` | `2812ad9` | aberto, `MERGEABLE` | **nenhuma** | 2/2 ok (Vercel) |
+
+**[verificado]** `main` no GitHub = `e43f96f` (`gh api repos/DevGuilherme-cpu/Loja_NEXAR/branches/main`).
+Nenhum dos dois foi revisado ou mergeado.
+
+**Dependência:** o #6 tem base `backend-base`, não `main`.
+- Mergear o #5 com **merge commit** (não *squash*/*rebase*): com squash, os commits do #5 reaparecem no #6 e geram conflito.
+- Depois do merge do #5, **conferir a base do #6**. O GitHub só troca a base para `main` automaticamente se a branch
+  `backend-base` for apagada no merge; se não for, mudar manualmente (Edit → base `main`). Mergear o #6 com base
+  `backend-base` **não** publica nada.
+- O #6 **tem migration**: `0006_categoria_nome_unico_ci` (sendo adicionada nesta rodada; ver seção 4). O commit final do #6 ainda não existe.
+
+---
+
+## 2. Como o projeto roda na Vercel
 
 | Item | Situação |
 |---|---|
-| Configuração | **[verificado]** Não existe `vercel.json` (nem nunca existiu no histórico: `git log --all -- vercel.json` vazio), nem `pyproject.toml`, `.python-version`, `Procfile` ou script de build. |
-| Detecção | **[inferência]** A Vercel usa o preset Django: acha o `manage.py`, lê `WSGI_APPLICATION = 'config.wsgi.application'` e publica uma função Python, instalando o `requirements.txt`. |
-| Python | **[inferência]** Versão padrão da Vercel (3.12). Django 6.0 exige Python ≥ 3.12. Localmente: Python 3.12.8. Recomenda-se fixar a versão (ex.: `.python-version` com `3.12`) numa mudança futura. |
-| Projeto na Vercel | **[verificado]** Fica na conta do Guilherme (`guilandin01-3531s-projects/loja-nexar`, pelos links dos status do GitHub). A Vercel CLI local (64.0.2) está logada como `eliton2025`, time `sousa15`, que **não** enxerga o projeto (`vercel ls loja-nexar` → `project_not_found`). |
-| Deploy automático | **[verificado]** Integração Git ativa: todo commit enviado ao GitHub ganha status "Vercel – Deployment has completed" (main: `a879ee3`, `09571d3`; branches: `c2aa400` da `backend-base`, `c10859e` da `organizacao`). Push na `main` = deploy de produção; push em outra branch = deploy de *preview*. |
-| Estáticos | **[verificado]** WhiteNoise com `WHITENOISE_USE_FINDERS = True` serve direto de `static/` e dos apps (não depende de `collectstatic`): `/static/css/style.css` e `/static/admin/css/base.css` → 200. |
-| Mídia (uploads) | Não persiste na Vercel: o sistema de arquivos da função é somente leitura/efêmero e não há storage externo configurado. `static(MEDIA_URL…)` em `config/urls.py` só funciona com `DEBUG=True`. Em produção `MEDIA_URL=/static/img/` faz os caminhos gravados no banco (`produtos/x.jpg`) apontarem para `static/img/produtos/` **[verificado: imagens saem como `/static/img/produtos/...`]**. Upload novo pelo painel/admin não aparece (e o salvar do painel ainda é simulado). |
-| Migrations | **[inferência forte]** Não rodam no build (nenhum comando de build no repositório; a Vercel não executa `migrate`). Precisam ser rodadas manualmente contra o Supabase por quem tem a `DATABASE_URL`. |
-| `DEBUG` | **[verificado]** Desligado em produção: URL inexistente devolve a página 404 genérica do Django, sem traceback. |
+| Runtime | **[verificado]** Django vira **uma Vercel Function** Python (WSGI via `WSGI_APPLICATION`), Fluid compute por padrão. [Doc Django](https://vercel.com/docs/frameworks/full-stack/django) |
+| Python | **[verificado]** Sem `.python-version`/`pyproject.toml` no repositório ⇒ padrão da Vercel, **3.12** (opções 3.12/3.13/3.14). Django 6.0 exige ≥ 3.12. [Doc Python](https://vercel.com/docs/functions/runtimes/python). Fixar a versão é melhoria opcional, não bloqueia (o padrão atual já atende). |
+| Limites | **[verificado]** Corpo de requisição/resposta até **4,5 MB** (413 acima); 300 s de duração padrão (Hobby, Fluid); disco somente leitura, `/tmp` efêmero até 500 MB. [Limits](https://vercel.com/docs/functions/limitations), [Runtimes](https://vercel.com/docs/functions/runtimes#file-system-support) |
+| Projeto | **[verificado]** Conta do Guilherme (`guilandin01-3531s-projects/loja-nexar`, pelos status do GitHub). A CLI local está em outra conta e não enxerga o projeto. |
+| Deploy automático | **[verificado]** Integração Git: push/merge na `main` = produção; push em outra branch = *preview* (checks "Vercel" nos PRs). |
+| Estáticos | **[verificado]** WhiteNoise com `WHITENOISE_USE_FINDERS = True`; a Vercel coleta direto dos apps ([doc](https://vercel.com/docs/frameworks/full-stack/django#whitenoise)). |
+| Mídia | Ver `docs/uploads_deploy.md`. `MEDIA_URL=/static/img/` em produção aponta os caminhos gravados para `static/img/`. |
+| Migrations | **[inferência forte]** Não rodam no build (sem comando de build no repositório). Rodam manualmente, por quem tem a `DATABASE_URL`. |
+| `DEBUG` | **[verificado]** Desligado em produção (404 genérico). |
 
 ### Variáveis de ambiente (só nomes)
 
 | Nome | Uso | Observação |
 |---|---|---|
-| `SECRET_KEY` | assinatura de sessão/CSRF | Obrigatória. Sem ela o Django não sobe. **[inferência]** está definida (site e CSRF funcionam). |
-| `DEBUG` | ausente ou `False` em produção | Ausente = `False`. Nunca `True` na Vercel. |
+| `SECRET_KEY` | sessão/CSRF | Obrigatória. |
+| `DEBUG` | ausente ou `False` | Nunca `True` na Vercel. |
 | `DATABASE_URL` | PostgreSQL do Supabase (pooler) | Ganha de `DB_NAME`. |
 | `MEDIA_URL` | `/static/img/` em produção | |
-| `DB_SSLMODE` | **novo** (já na `backend-base`), padrão `require` | Não precisa ser criado na Vercel: o padrão é o que o Supabase exige. Só `disable` para PostgreSQL local de teste. |
-| `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` | MySQL local (avaliação) | Não devem existir na Vercel. |
+| `DB_SSLMODE` | padrão `require` (já no #5) | Não precisa ser criada. |
+| `VERCEL` | definida pela própria Vercel (`VERCEL=1`, build e runtime) | Reforço da opção B. O desligamento principal vem de `DEBUG=False` (não depende desta variável). [Doc](https://vercel.com/docs/environment-variables/system-environment-variables) |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` | MySQL local | Não devem existir na Vercel. |
 
-Ver os nomes realmente cadastrados exige acesso ao projeto (`vercel env ls` na conta do Guilherme)
-— não foi possível daqui.
+### Preview × banco de produção — **verificação pendente**
+
+- **[verificado]** Os previews estão atrás da **proteção SSO da Vercel**: em 17/11/2026 09:45 UTC,
+  `curl -sI https://loja-nexar-git-backend-base-guilandin01-3531s-projects.vercel.app/` e o mesmo para
+  `…-git-fase3-crud-…` → `302 Found`, `Location: https://vercel.com/sso-api?url=…`. Visitante anônimo não acessa.
+- **[inferência]** Proteção de acesso **não** impede o preview de usar a `DATABASE_URL` de produção: ela controla
+  quem abre a URL, não quais variáveis o deploy recebe ([Deployment Protection](https://vercel.com/docs/deployment-protection),
+  [variáveis por ambiente](https://vercel.com/docs/environment-variables)). Se a `DATABASE_URL` estiver também no ambiente
+  *Preview*, os previews já publicados do #5/#6 rodam código novo contra o Supabase de produção (ex.: `/painel/pedidos/`
+  quebra até a 0004; quem tem acesso à equipe na Vercel poderia criar contas/produtos reais).
+- **Pendente:** Guilherme conferir em Settings → Environment Variables se `DATABASE_URL` está marcada para *Preview*. Precisa de acesso à Vercel dele.
 
 ### Riscos de configuração
 
-- `SECRET_KEY` vazia/ausente em algum ambiente (ex.: *Preview*) derruba aquele deploy.
-- `DATABASE_URL` também no ambiente *Preview* ⇒ deploys de preview (gerados por **qualquer push de branch**) usam o **banco de produção**. Não é possível conferir daqui. Se for o caso, o preview da `backend-base` vai mostrar erro em `/painel/pedidos/` até a 0004 rodar (código novo lê `preco_unitario`) **e o `/cadastro/` do preview criaria contas reais no Supabase**. Conferir as variáveis do ambiente Preview antes do push (passo A).
 - `ALLOWED_HOSTS` só aceita `.vercel.app` (e local). Domínio próprio exigiria alterar settings.
-- Sem `SECURE_PROXY_SSL_HEADER`: o Django não sabe que a requisição veio por HTTPS. O CSRF funciona porque `CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]` cobre a origem. Não remover essa linha.
-- HSTS vem da própria Vercel, não do Django (`SECURE_HSTS_*` não configurado). Não há CSP.
+- Sem `SECURE_PROXY_SSL_HEADER`; o CSRF funciona porque `CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]`. Não remover.
+- Não há CSP (melhoria opcional; não bloqueia: o site não aceita HTML de usuários).
 
 ---
 
-## 2. Verificação pública atual (GET, sem login)
+## 3. Evidência pública atual (GET, sem login) — 17/11/2026 09:45 UTC
 
-Em 17/11/2026 00:33 UTC (`curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}"`).
-Nesse momento a produção já era o commit `09571d3` (PR #3, deploy concluído às 00:32 UTC).
-
-| URL | Status | Observação |
-|---|---|---|
-| `/` | 200 | |
-| `/produtos/` | 200 | |
-| `/produto/1/` … `/produto/9/` | 200 | `data-cor` preenchido nas 7 peças com as cores da 0003; tênis e óculos com `data-modelo="/static/modelos/*.glb"` |
-| `/entrar/` | 200 | form POST com CSRF, mas na `main` o login da loja ainda é só tela (`entrar` só renderiza) |
-| `/cadastro/` | 200 | só tela na `main` |
-| `/sair/` | 404 | rota não existe na `main` |
-| `/painel/`, `/painel/pedidos/` | 302 | → `/admin/login/?next=...` (`@staff_member_required` da `main`) |
-| `/admin/login/` | 200 | |
-| `/nao-existe-xyz/` | 404 | página genérica ⇒ `DEBUG=False` |
-
-Cabeçalhos (`curl -sI /` e `/admin/login/`): `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`,
+`curl -sI https://loja-nexar.vercel.app/`:
+`HTTP/1.1 200 OK`, `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`,
 `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`,
-`Cross-Origin-Opener-Policy: same-origin`, cookie `csrftoken` com `Secure; SameSite=Lax`. Sem `Content-Security-Policy`.
+`Cross-Origin-Opener-Policy: same-origin`, `Server: Vercel`. Sem `Content-Security-Policy`.
 
-**Migrations em produção:** **[inferência forte]** `0001`–`0003` aplicadas: a página de produto
-consulta a coluna `cor` sem erro (0002) e os valores exatos da 0003 estão nos produtos e nos
-`.glb` locais. Confirmar com a consulta 4 da seção 5.
+`curl -sI http://loja-nexar.vercel.app/`: `HTTP/1.0 308 Permanent Redirect`, `Location: https://loja-nexar.vercel.app/`.
 
----
+Ou seja: HTTP → HTTPS é redirecionado pela Vercel e o HSTS vem da Vercel (o Django não configura `SECURE_HSTS_*`).
+A evidência cobre só o domínio `loja-nexar.vercel.app` nesta data; não afirma nada sobre outros domínios.
 
-## 3. Estado publicado × local
-
-| Item | Produção (`main` no GitHub = `e43f96f`) | `backend-base` local (não publicada; commit no relatório revisado) |
-|---|---|---|
-| Login da loja `/entrar/` | só tela | `LoginView` real, mensagem de boas-vindas |
-| Cadastro `/cadastro/` | só tela | cria cliente comum (`is_staff=False`), e-mail obrigatório e único (form) e já entra |
-| Sair `/sair/` | 404 | POST desloga; GET → 405 |
-| Painel `/painel/*` | `@staff_member_required` → `/admin/login/` | `somente_staff`: visitante → `/entrar/?next=…`; cliente logado → home com "Acesso restrito à equipe da loja." |
-| Total do pedido | `produto.preco × quantidade` (preço de hoje) | `preco_unitario × quantidade` (preço da compra) |
-| Banco | migrations até `0003` (inferência) | `0004` e `0005` |
-| CHECKs no banco | nenhuma | preço ≥ 0, quantidade ≥ 1, preço unitário ≥ 0 |
-| E-mail único no banco | não | índice `auth_user_email_ci_uniq` (0005), ignora caixa e espaços nas pontas |
-| SSL do PostgreSQL | `require` fixo | `DB_SSLMODE` (padrão `require`) |
-
-**Integração com a `main`:** os PRs #2, #3 e #4 do Guilherme já foram integrados na `backend-base`
-(conflitos de templates/CSS/views resolvidos preservando o redesign). Antes do push, conferir de novo
-`git fetch` + `git log backend-base..origin/main` e integrar se a `main` tiver andado.
+**Migrations em produção:** **[inferência forte]** `0001`–`0003` aplicadas (páginas usam a coluna `cor` sem erro).
+Confirmar com a consulta 5 da seção 5.
 
 ---
 
 ## 4. O que será publicado
 
-Commits da `backend-base` ainda fora da `main` (sem contar merges):
+**Commit exato a publicar:** `<commit final da fase3-crud após a revisão>` (inclui todo o #5 e o #6).
+Hoje: `backend-base` = `4ef3c46`, `fase3-crud` = `2812ad9`, mas o #6 ainda vai receber a 0006 e a opção B de uploads.
 
-- **Autenticação e painel** — `6e9777a`, `bc7a61b`: `loja/views.py` (`Entrar`, `Sair`, `cadastro`, `destino_seguro`, `somente_staff`), `loja/forms.py`, `loja/urls.py` (`/sair/`), `config/settings.py` (`LOGIN_*`), templates `base.html` (Sair via POST, rodapé por estado), `login.html`, `cadastro.html`, regra `.topo-sair` no `style.css`, testes.
-- **Banco / preço do pedido** — `2712c49`, `2ca38b0`, `82be85a`: `loja/models.py`, `0004_pedido_preco_unitario` (com verificação somente leitura como primeira operação), `popular_loja`, `DB_SSLMODE`, `.env.example`, `docs/banco.sql`, `docs/diagrama_er.md`, `docs/validacao_banco.md`, `docs/validacao_mysql.ps1`.
-- **E-mail único e admin** — `af9c65f` e correção da revisão: `0005_email_unico` (índice `LOWER(TRIM(email))`), `forms.py`, `admin.py` (`NexarUserAdmin`, `PedidoAdmin`), tratamento de corrida no cadastro, `loja/test_email.py`.
-- **Documentação** — `f143c33` e revisão: este arquivo.
+Resumo: login/cadastro/sair, painel só para staff, preço gravado no pedido, e-mail único (#5);
+CRUD real de produtos e categorias com uploads validados, uploads desligados na Vercel (#6).
 
-### Migrations e o que mudam no Supabase
+### Migrations — mudanças de schema (não são "inofensivas")
 
-| Migration | Alteração no banco | Desfeita por rollback de código? |
-|---|---|---|
-| `loja.0004_pedido_preco_unitario` | `pedidos`: nova coluna `preco_unitario numeric(10,2)`; preenche cada pedido existente com o preço **atual** do produto; vira `NOT NULL` (sem default no banco); CHECKs `produto_preco_nao_negativo` (produtos), `pedido_quantidade_minima_1` e `pedido_preco_unitario_nao_negativo` (pedidos). A primeira operação é uma verificação somente leitura que aborta, sem alterar nada, se houver preço < 0 ou quantidade < 1. | **Não.** Promover deploy antigo na Vercel não mexe no banco. |
-| `loja.0005_email_unico` | `auth_user`: índice único funcional `auth_user_email_ci_uniq` em `NULLIF(LOWER(TRIM(email)), '')`. Aborta, sem alterar contas, se houver e-mails repetidos ignorando caixa e espaços. E-mails vazios continuam permitidos. | **Não.** |
+| Migration | PR | Alteração | Reversão de schema (`migrate loja …`) |
+|---|---|---|---|
+| `0004_pedido_preco_unitario` | #5 | `pedidos`: coluna `preco_unitario numeric(10,2)`, preenchida com o preço **atual** do produto, depois `NOT NULL`; CHECKs `produto_preco_nao_negativo`, `pedido_quantidade_minima_1`, `pedido_preco_unitario_nao_negativo`. Primeira operação: verificação somente leitura que aborta sem alterar nada se houver preço < 0 ou quantidade < 1. | `migrate loja 0003`: remove as CHECKs e **apaga a coluna `preco_unitario` com os valores** (perde o preço da compra dos pedidos). |
+| `0005_email_unico` | #5 | `auth_user`: índice único `auth_user_email_ci_uniq` em `NULLIF(LOWER(TRIM(email)), '')`. Aborta sem alterar se houver e-mails repetidos. | `migrate loja 0004`: remove o índice. Sem perda de dados; e-mails duplicados voltam a ser possíveis. |
+| `0006_categoria_nome_unico_ci` | #6 | `categorias`: índice único em `LOWER(TRIM(nome))`, com verificação que aborta se houver colisão. | `migrate loja 0005`: remove o índice. Sem perda de dados; nomes repetidos voltam a ser possíveis. |
 
-Ambas são aditivas (não apagam colunas nem tabelas).
+Rollback de código (promover deploy antigo) **não** desfaz nenhuma delas. Ver seção 8.
 
 ---
 
 ## 5. Pré-checagens no Supabase (somente leitura — SQL editor)
 
-Rodar **antes** do `migrate`. Todas são `SELECT`; nenhuma altera dados.
+Rodar **antes** do `migrate`, depois da aprovação dos PRs. Todas são `SELECT`.
 
 ```sql
--- 1) Pedidos que violariam a CHECK quantidade >= 1 (esperado: 0 linhas)
+-- 1) Pedidos que violariam quantidade >= 1 (esperado: 0 linhas)
 SELECT id, quantidade FROM pedidos WHERE quantidade < 1;
 
--- 2) Produtos que violariam a CHECK preco >= 0 (esperado: 0 linhas)
+-- 2) Produtos que violariam preco >= 0 (esperado: 0 linhas)
 SELECT id, nome, preco FROM produtos WHERE preco < 0;
 
--- 3) E-mails repetidos ignorando maiúsculas/minúsculas, sem contar vazios (esperado: 0 linhas)
+-- 3) E-mails repetidos ignorando caixa e espaços, sem vazios (esperado: 0 linhas)
 SELECT LOWER(TRIM(email)) AS email_ci, COUNT(*) AS contas, ARRAY_AGG(id ORDER BY id) AS ids
-FROM auth_user
-WHERE TRIM(email) <> ''
-GROUP BY LOWER(TRIM(email))
-HAVING COUNT(*) > 1;
+FROM auth_user WHERE TRIM(email) <> ''
+GROUP BY LOWER(TRIM(email)) HAVING COUNT(*) > 1;
 
--- 4) Migrations do app loja já aplicadas (esperado: 0001, 0002, 0003 e nada além)
+-- 4) Categorias que colidem ignorando caixa e espaços (esperado: 0 linhas)
+SELECT LOWER(TRIM(nome)) AS nome_ci, COUNT(*) AS categorias, ARRAY_AGG(id ORDER BY id) AS ids
+FROM categorias GROUP BY LOWER(TRIM(nome)) HAVING COUNT(*) > 1;
+
+-- 5) Migrations do app loja (esperado: 0001, 0002, 0003 e nada além)
 SELECT * FROM django_migrations WHERE app = 'loja' ORDER BY id;
 
--- 5) Conferências extras
+-- 6) Conferências extras
 SELECT column_name FROM information_schema.columns
-WHERE table_name = 'pedidos' AND column_name = 'preco_unitario';   -- esperado: 0 linhas
-SELECT indexname FROM pg_indexes WHERE indexname = 'auth_user_email_ci_uniq'; -- esperado: 0 linhas
+WHERE table_name = 'pedidos' AND column_name = 'preco_unitario';            -- esperado: 0 linhas
+SELECT indexname FROM pg_indexes WHERE tablename IN ('auth_user', 'categorias'); -- conferir que os índices novos não existem
 SELECT COUNT(*) AS pedidos FROM pedidos;
 SELECT COUNT(*) AS pedidos_sem_produto FROM pedidos p
-LEFT JOIN produtos pr ON pr.id = p.produto_id WHERE pr.id IS NULL; -- esperado: 0
+LEFT JOIN produtos pr ON pr.id = p.produto_id WHERE pr.id IS NULL;          -- esperado: 0
 ```
 
-Se 1, 2 ou 3 retornarem linhas: corrigir manualmente (decisão humana) antes de seguir.
+Se 1–4 retornarem linhas: parar; corrigir os dados é decisão humana. Se 5 mostrar algo diferente de 0001–0003: parar e investigar.
 
-Também no Dashboard do Supabase (exigência da skill `nexar-revisao`): conferir que a **Data API** está
-desligada, ou que as tabelas `auth_user`, `pedidos`, `produtos` e `categorias` têm RLS ativa sem políticas
-públicas. Caso contrário, a chave pública do projeto permitiria ler `auth_user` (hash de senha e e-mails)
-por fora do Django. Não verificado daqui (sem acesso ao Supabase).
-Se 4 mostrar algo diferente de 0001–0003: parar e investigar.
+Também no Dashboard do Supabase: conferir que a **Data API** está desligada, ou que `auth_user`, `pedidos`,
+`produtos` e `categorias` têm RLS ativa sem políticas públicas (senão a chave pública leria `auth_user`). Não verificado daqui.
 
 ---
 
-## 6. Ordem segura (análise)
+## 6. Ordem e compatibilidade
 
-**Código novo com banco antigo (deploy antes do migrate) — quebra.** O model novo tem
-`preco_unitario`, então todo `SELECT` de `Pedido` pede essa coluna: `/painel/pedidos/` e
-`/admin/loja/pedido/` dão erro 500 até a 0004 rodar. O resto da loja funciona.
+**Código novo com banco antigo (deploy antes do migrate) — quebra:** o model novo lê `preco_unitario`;
+`/painel/pedidos/` e `/admin/loja/pedido/` dão 500 até a 0004. Por isso o migrate vem antes.
 
-**Código antigo com banco novo (migrate antes do merge) — funciona quase tudo.**
-- O model antigo não conhece `preco_unitario` e lista as colunas explicitamente: leituras
-  (`/painel/pedidos/`, home, produtos) continuam funcionando. O total mostrado continua sendo
-  `produto.preco × quantidade` até o deploy novo.
-- **Única quebra conhecida:** criar Pedido pelo `/admin/` antigo (ou `popular_loja` antigo) faz
-  `INSERT` sem `preco_unitario` → violação de `NOT NULL` (erro 500). Só staff faz isso; a loja
-  não cria pedidos (não há checkout).
-- CHECKs: editar produto com preço negativo no admin antigo dá erro 500 em vez de mensagem — aceitável.
-- Índice de e-mail: criar usuário com e-mail repetido pelo admin antigo dá erro 500 — raro.
-  O cadastro da `main` é só tela.
+**Código antigo com banco novo (migrate antes do deploy) — operações incompatíveis durante a janela:**
 
-**Ordem recomendada:** backup → migrate (com o código da branch do PR) → merge (deploy
-automático) → verificação. Janela de risco: entre o migrate e o fim do deploy, não criar pedidos
-pelo `/admin/`. Contrapartida: se o PR não for aprovado depois do migrate, o banco fica à frente
-do código (inofensivo para leitura; ver seção 8 para reverter).
+| Operação no código antigo (produção atual ou deploy intermediário do #5) | Resultado com 0004–0006 aplicadas |
+|---|---|
+| Criar Pedido pelo `/admin/` antigo (ou `popular_loja` antigo) | `INSERT` sem `preco_unitario` → viola `NOT NULL` → **500** |
+| Salvar produto com preço negativo / pedido com quantidade 0 no admin antigo | viola CHECK → **500** (em vez de mensagem) |
+| Criar/editar usuário com e-mail que colide (caixa/espaços) no admin antigo | viola índice da 0005 → **500** |
+| Criar/renomear categoria que colide (`" Camisetas"` × `"camisetas"`) no admin antigo ou no painel do #5 | viola índice da 0006 → **500** |
+| Leituras (home, produtos, `/painel/pedidos/` antigo) | funcionam; total ainda calculado com o preço atual até o deploy novo |
+
+**Como suspender:** avisar a equipe antes da janela; **ninguém usa `/admin/` nem `/painel/`** do backup até a
+verificação final. A loja pública não grava nada (não há checkout), então continua no ar.
+
+**Deploy intermediário:** mergear o #5 gera um deploy de produção só com o #5 até o #6 entrar. Nesse intervalo
+vale a linha da 0006 acima. Mergear o #6 logo em seguida.
 
 ---
 
-## 7. Sequência recomendada
+## 7. Janela de mudança (sequência)
 
-Pré-requisito local (sem efeito remoto) — **cumprido** na `backend-base` revisada: 0004 final, 0005 e
-`DB_SSLMODE` commitados; `main` integrada até `e43f96f`; suíte verde em SQLite e em PostgreSQL 17 descartável;
-`makemigrations --check` sem mudanças; validado também em MySQL 8.0.46 local (ver `docs/validacao_banco.md`).
+Pré-requisitos (sem efeito remoto): commit final do #6 com 0006 e opção B; suíte verde; `makemigrations --check` limpo.
 
-Ordem de execução: **1 → 2 → 3 → 4 → 5 → 6 → 7** (as letras só identificam cada ação).
+1. **[AUTORIZAÇÃO] Revisão e aprovação** do #5 e do #6 pelo Guilherme no GitHub. Sem aprovação, parar aqui.
+2. **[AUTORIZAÇÃO] Conferir variáveis do ambiente Preview** (seção 2) — Guilherme.
+3. **Avisar a equipe** da janela (seção 6).
+4. **[AUTORIZAÇÃO] Backup** — quem administra o Supabase: Dashboard → Database → Backups (conferir backup recente;
+   no plano gratuito não há restauração pontual garantida) **e** dump próprio:
+   `pg_dump "<URL de conexão direta ou session pooler>" -Fc -f nexar_antes_0004.dump`
+   (URL só na variável da sessão, nunca em arquivo versionado).
+5. **[AUTORIZAÇÃO] Pré-checagens** somente leitura (seção 5).
+6. **[AUTORIZAÇÃO] `migrate`** — Eliton, na própria máquina, no checkout do `<commit final da fase3-crud após a revisão>`:
 
-**1. (A) [AUTORIZAÇÃO] Push da branch** — `git push origin backend-base`.
-Efeito colateral: a Vercel cria um deploy de *preview* da branch (ver risco do `DATABASE_URL` em Preview).
+   ```powershell
+   # sessão nova; a URL só existe nesta janela (não gravar no .env)
+   Get-ChildItem Env:DB_SSLMODE              # deve dar erro (não definida); e sem DB_SSLMODE=disable no .env
+   $env:DATABASE_URL = "<URL do Supabase>"   # Session pooler (5432) ou conexão direta para DDL
+   python manage.py showmigrations loja      # 0001-0003 [X]; 0004, 0005, 0006 [ ]
+   python manage.py migrate --plan           # só loja.0004, loja.0005, loja.0006
+   python manage.py migrate
+   python manage.py showmigrations loja      # 0001-0006 [X]
+   Remove-Item Env:DATABASE_URL
+   ```
 
-**2. (B) [AUTORIZAÇÃO] Abrir PR** `backend-base` → `main` no GitHub (revisão do Guilherme). Não mergear ainda.
-
-**3. (D) [AUTORIZAÇÃO] Backup do Supabase** (feito antes do migrate, por quem administra o projeto):
-Dashboard → Database → Backups (conferir se há backup diário recente; no plano gratuito não há
-restauração pontual garantida) **e** um dump próprio, por exemplo
-`pg_dump "<URL de conexão direta ou session pooler>" -Fc -f nexar_antes_0004.dump`
-(rodar só com a URL na variável de ambiente da sessão, nunca em arquivo versionado).
-
-**4. (E) [AUTORIZAÇÃO] `migrate` contra o Supabase** — por quem tem a `DATABASE_URL` (Eliton), na própria máquina,
-no checkout do commit do PR:
-
-```powershell
-# PowerShell, numa sessão nova; a URL só existe nesta janela (não gravar no .env)
-$env:DATABASE_URL = "<URL do Supabase>"   # preferir Session pooler (porta 5432) ou conexão direta para DDL
-python manage.py showmigrations loja      # deve listar 0001-0003 [X] e 0004/0005 [ ]
-python manage.py migrate --plan           # conferir: só loja.0004 e loja.0005
-python manage.py migrate
-python manage.py showmigrations loja      # 0001-0005 [X]
-Remove-Item Env:DATABASE_URL
-```
-
-`DB_SSLMODE` não precisa ser definido (padrão `require`). **Antes, confirme que `DB_SSLMODE=disable` não está
-no `.env` local nem na sessão** (`Get-ChildItem Env:DB_SSLMODE` deve dar erro), senão a conexão com o Supabase
-iria sem SSL ou falharia. `DATABASE_URL` tem prioridade sobre o
-`DB_NAME` do `.env` local (o `load_dotenv` não sobrescreve variável já definida, e o settings
-testa `DATABASE_URL` primeiro). **Não** rodar `popular_loja` no Supabase.
-Se a 0004/0005 abortar pela verificação, nada é alterado (PostgreSQL desfaz a transação): corrigir os dados e repetir.
-
-**5. (C) [AUTORIZAÇÃO] Merge do PR na `main`** (Guilherme).
-
-**6. (F) Deploy** — automático: o push/merge na `main` dispara o deploy de produção
-(**[verificado]** pelo histórico de status do GitHub). Acompanhar no painel da Vercel do
-Guilherme até "Ready". Não usar `vercel deploy --prod` manual.
-
-**7. (G) Verificação pós-deploy** (ver checklist abaixo).
+   Não rodar `popular_loja` no Supabase. Se uma verificação abortar, o PostgreSQL desfaz a transação daquela
+   migration: corrigir os dados e repetir.
+7. **[AUTORIZAÇÃO] Merge do #5** na `main` (merge commit) — Guilherme. Deploy automático do #5.
+8. **Conferir/mudar a base do #6 para `main`**; checks verdes; **[AUTORIZAÇÃO] merge do #6** — Guilherme. Deploy automático final.
+   Acompanhar até "Ready" no painel da Vercel. Não usar `vercel deploy --prod` manual.
+9. **Verificação** (checklist abaixo). Só então liberar admin/painel para a equipe.
 
 ### Checklist pós-deploy
 
 Visitante (aba anônima):
 - [ ] `/`, `/produtos/`, `/produto/1/` → 200, fotos e 3D carregando.
-- [ ] `/entrar/` e `/cadastro/` → 200.
-- [ ] `GET /sair/` → **405**.
-- [ ] `/painel/` → 302 para **`/entrar/?next=/painel/`** (antes ia para `/admin/login/`).
-- [ ] `/admin/login/` → 200; URL inexistente → 404 genérico (DEBUG desligado).
+- [ ] `/entrar/`, `/cadastro/` → 200; `GET /sair/` → 405.
+- [ ] `/painel/` → 302 para `/entrar/?next=/painel/`.
+- [ ] `/admin/login/` → 200; URL inexistente → 404 genérico.
+- [ ] `curl -sI https://loja-nexar.vercel.app/` mantém `Strict-Transport-Security`; `http://` → 308 para `https://`.
 
-Cliente (conta criada no próprio `/cadastro/` com e-mail de teste):
-- [ ] Cadastro conclui, mostra "Conta criada!" e o topo mostra "Olá, <usuário>" + botão Sair.
-- [ ] Repetir o cadastro com o mesmo e-mail em MAIÚSCULAS → erro "Já existe uma conta com este e-mail.".
-- [ ] `/painel/` → volta para a home com "Acesso restrito à equipe da loja." (sem loop de redirecionamento).
-- [ ] Botão Sair → home com "Você saiu da sua conta.".
-- [ ] Login com usuário/senha errados em `/entrar/` → mensagem de erro, sem 500.
+Cliente (conta de teste criada no `/cadastro/`):
+- [ ] Cadastro conclui e mostra "Olá, <usuário>" + Sair.
+- [ ] Mesmo e-mail em MAIÚSCULAS → "Já existe uma conta com este e-mail.".
+- [ ] `/painel/` → home com "Acesso restrito à equipe da loja.".
+- [ ] Sair → "Você saiu da sua conta."; login errado → mensagem, sem 500.
 
 Staff:
-- [ ] Login em `/entrar/` → link "Painel" no topo.
-- [ ] `/painel/`, `/painel/categorias/`, `/painel/pedidos/` → 200; totais dos pedidos em R$ (não vazios).
-- [ ] `/admin/loja/pedido/add/` criando pedido sem preço → salva com o preço atual do produto.
-- [ ] Depois do teste, desativar/remover a conta de cliente de teste se não for útil.
+- [ ] `/painel/` (lista de produtos), `/painel/produtos/novo/`, `/painel/categorias/`, `/painel/pedidos/` → 200; totais em R$.
+- [ ] Formulário de produto mostra o aviso de **uploads desativados** e campos de arquivo desabilitados (confirma que `VERCEL` existe no runtime).
+- [ ] Editar nome/preço de um produto sem trocar arquivo → salva e a foto/3D continuam aparecendo.
+- [ ] Criar categoria com nome que colide em caixa (ex.: `camisetas`) → mensagem de erro, sem 500.
+- [ ] `/admin/loja/pedido/add/` sem preço → salva com o preço atual do produto.
+- [ ] Remover/desativar as contas e dados de teste.
 
 ---
 
-## 8. Recuperação
+## 8. Recuperação — três coisas diferentes
 
-| Situação | Ação | Consequência |
+| Tipo | Como | O que volta / o que se perde |
 |---|---|---|
-| Deploy novo com erro | [AUTORIZAÇÃO] Vercel → Deployments → deploy anterior de produção → **Promote to Production** (instant rollback), ou reverter o merge na `main` (novo commit). | Só o código volta. O banco continua com 0004/0005, o que o código antigo tolera (ver seção 6: só "adicionar pedido" no admin quebra). Normalmente **não** é preciso mexer no banco. |
-| Precisa desfazer as migrations | [AUTORIZAÇÃO] Com o código da branch e a `DATABASE_URL`: `python manage.py migrate loja 0003`. | Remove o índice de e-mail e as CHECKs e **apaga a coluna `preco_unitario` com os valores gravados** (o preço da compra dos pedidos feitos depois do deploy se perde; o total volta a usar o preço atual do produto). O passo de preenchimento é `noop` na volta. Fazer o rollback de código **antes** (o código novo quebra sem a coluna). |
-| Dados corrompidos | [AUTORIZAÇÃO] Restaurar o dump do passo D (`pg_restore`) ou backup do Supabase. | Perde tudo o que foi gravado depois do backup (contas, pedidos). Último recurso. |
+| **Rollback de código** | [AUTORIZAÇÃO] Vercel → Deployments → deploy anterior → *Promote to Production*, ou revert do merge na `main`. | Só o código. O schema continua em 0006; o código antigo passa a ter as incompatibilidades da seção 6 (criar pedido no admin, colisões → 500). Normalmente basta isso e suspender o admin. |
+| **Reversão de schema** | [AUTORIZAÇÃO] Com o código da branch e a `DATABASE_URL`, **depois** do rollback de código: `migrate loja 0005` (tira índice de categorias), `migrate loja 0004` (tira também o de e-mail), `migrate loja 0003` (tira CHECKs e **apaga `preco_unitario`**). | 0006/0005: sem perda de dados. 0004: perde o preço gravado de todos os pedidos (inclusive os feitos depois do deploy); o total volta a usar o preço atual. O código novo não funciona sem a coluna. |
+| **Restauração de dados** | [AUTORIZAÇÃO] `pg_restore` do dump do passo 4 ou backup do Supabase. | Volta o banco inteiro ao momento do backup: **perde tudo** gravado depois (contas, pedidos, produtos). Último recurso. |
 
 ---
 
 ## 9. Limitações deste levantamento
 
-- Sem acesso ao projeto da Vercel (pertence à conta do Guilherme; a CLI local está em outra conta). Não foi possível ver variáveis por ambiente (Production/Preview), versão de Python usada no build, logs, nem se *Deployment Protection* protege os previews.
-- Sem acesso ao Supabase: o estado das migrations e a ausência de dados inválidos/e-mails duplicados são inferências; confirmar com as consultas da seção 5.
-- Não foi testado login/POST em produção (só GET público).
-- O `migrate` foi testado em **PostgreSQL 17.11 local descartável** (do zero, upgrade 0003→0005 com dados,
-  bloqueios da 0004/0005, reverse da 0005 e suíte completa) — ver `docs/validacao_banco.md`. Não foi testado
-  contra o pooler do Supabase; por isso a recomendação de Session pooler/conexão direta no passo E.
-- Validado em MySQL 8.0.46 local (do zero, upgrade com dados, bloqueios, suíte e `banco.sql`).
+- Sem acesso ao projeto da Vercel nem ao Supabase: variáveis por ambiente, logs, opção de variáveis de sistema e
+  estado real das migrations não foram vistos; confirmar com a seção 5 e com o Guilherme.
+- Só GET público em produção; previews não abertos (SSO).
+- Migrations testadas em PostgreSQL 17 local descartável e MySQL 8.0.46 (ver `docs/validacao_banco.md`); a 0006 deve
+  passar pela mesma validação antes da janela. Nada testado contra o pooler do Supabase.

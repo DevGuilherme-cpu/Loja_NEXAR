@@ -1,3 +1,4 @@
+import uuid
 from functools import wraps
 
 from django.conf import settings
@@ -6,13 +7,15 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
-from django.db import IntegrityError, transaction
-from django.db.models import Count
+from django.db import DatabaseError, IntegrityError, transaction
+from django.db.models import Count, F, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import EMAIL_REPETIDO, CadastroForm, email_em_uso
+from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso,
+                    uploads_habilitados)
 from .models import Categoria, Pedido, Produto
 
 # produtos já com a categoria (JOIN)
@@ -35,8 +38,104 @@ def produtos(request):
                   {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria})
 
 
+QTD_MAX_POR_PEDIDO = 10
+SESSAO_TOKENS = "pedido_tokens"
+
+
+def novo_token_pedido(request):
+    """Token de uso único por formulário: evita gravar o mesmo pedido duas vezes (F5 / clique duplo)."""
+    token = uuid.uuid4().hex
+    tokens = request.session.get(SESSAO_TOKENS, [])[-19:]  # guarda no máximo 20 formulários abertos
+    request.session[SESSAO_TOKENS] = tokens + [token]
+    return token
+
+
+def consumir_token_pedido(request, token):
+    tokens = request.session.get(SESSAO_TOKENS, [])
+    if not token or token not in tokens:
+        return False
+    tokens.remove(token)
+    request.session[SESSAO_TOKENS] = tokens
+    return True
+
+
+def devolver_token_pedido(request, token):
+    """Compra recusada depois de consumir o token (sem estoque): o mesmo formulário pode ser reenviado."""
+    tokens = request.session.get(SESSAO_TOKENS, [])
+    if token not in tokens:
+        request.session[SESSAO_TOKENS] = (tokens + [token])[-20:]
+
+
+def inteiro_ascii(texto):
+    """Só 0-9: str.isdigit() aceita "²" e "١", que fariam int() falhar ou aceitar dígitos estranhos."""
+    # len <= 9: o Python recusa int() de textos com mais de 4300 dígitos (seria erro 500)
+    return texto.isascii() and texto.isdigit() and len(texto) <= 9
+
+
 def produto(request, id):
-    return render(request, "produto.html", {"produto": get_object_or_404(PRODUTOS, id=id)})
+    contexto = {"produto": get_object_or_404(PRODUTOS, id=id)}
+    if request.user.is_authenticated:
+        contexto["token_pedido"] = novo_token_pedido(request)
+    return render(request, "produto.html", contexto)
+
+
+@require_POST
+def pedido(request):
+    """Compra de um produto: grava o pedido e baixa o estoque na mesma transação.
+
+    Tudo é validado no servidor (o HTML pode ser alterado). O preço vem do banco e fica gravado
+    em preco_unitario. A baixa de estoque é um UPDATE condicional (WHERE estoque >= quantidade):
+    duas compras simultâneas da última peça não passam as duas, em SQLite, PostgreSQL e MySQL.
+    """
+    produto_id = request.POST.get("produto_id", "")
+    if not inteiro_ascii(produto_id):
+        messages.error(request, "Produto inválido.")
+        return redirect("loja:produtos")
+    produto = get_object_or_404(Produto, id=int(produto_id))
+    volta = redirect("loja:produto", id=produto.id)
+
+    if not request.user.is_authenticated:
+        messages.info(request, "Entre na sua conta para comprar.")
+        return redirect(f"{reverse('loja:entrar')}?next={reverse('loja:produto', args=[produto.id])}")
+
+    # O campo "personalizacao" do formulário é ignorado de propósito: Pedido não tem coluna para ele
+    # (a personalização 3D é só visual). Campos extras como "preco" também são ignorados.
+    tamanho = request.POST.get("tamanho", "")
+    quantidade = request.POST.get("quantidade", "").strip()
+    if tamanho not in dict(Pedido.TAMANHOS):
+        messages.error(request, "Escolha um tamanho válido.")
+        return volta
+    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
+        messages.error(request, f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}.")
+        return volta
+    quantidade = int(quantidade)
+
+    # depois das validações: um formulário inválido pode ser corrigido e reenviado com o mesmo token
+    token = request.POST.get("token_pedido")
+    if not consumir_token_pedido(request, token):
+        messages.warning(request, "Este pedido já foi enviado ou a página expirou. Confira em Pedidos antes de comprar de novo.")
+        return volta
+
+    with transaction.atomic():
+        baixou = Produto.objects.filter(id=produto.id, estoque__gte=quantidade).update(
+            estoque=F("estoque") - quantidade)
+        if not baixou:
+            # first(): o produto pode ter sido excluído entre o get_object_or_404 e o UPDATE
+            estoque = Produto.objects.filter(id=produto.id).values_list("estoque", flat=True).first()
+            if estoque is None:
+                messages.error(request, "Este produto não está mais disponível.")
+                return redirect("loja:produtos")
+            devolver_token_pedido(request, token)  # pode corrigir a quantidade e reenviar
+            messages.error(request, "Produto esgotado." if estoque == 0 else
+                           f"Só restam {estoque} unidade(s) de “{produto.nome}”.")
+            return volta
+        # mesma transação do UPDATE: a linha já está bloqueada, o preço lido é o atual
+        preco = Produto.objects.filter(id=produto.id).values_list("preco", flat=True).get()
+        novo = Pedido.objects.create(usuario=request.user, produto=produto, tamanho=tamanho,
+                                     quantidade=quantidade, preco_unitario=preco)
+    total = f"{novo.total:.2f}".replace(".", ",")
+    messages.success(request, f"Pedido #{novo.id} confirmado: {quantidade}× {produto.nome} ({tamanho}) — R$ {total}.")
+    return volta
 
 
 # ---------- conta (login / cadastro / sair) ----------
@@ -99,8 +198,7 @@ def cadastro(request):
     return render(request, "cadastro.html", {"form": form, "next": request.POST.get("next") or request.GET.get("next", "")})
 
 
-# Painel
-# TODO: gravar no banco (salvar/excluir ainda são simulados)
+# Painel (CRUD de produtos e categorias pelo ORM)
 # Todas as views do painel exigem usuário staff (is_staff + ativo):
 #  - visitante  -> /entrar/?next=... (padrão do staff_member_required)
 #  - cliente logado sem is_staff -> home com mensagem de erro. Não dá para usar só o padrão
@@ -124,19 +222,60 @@ def painel_produtos(request):
     return render(request, "painel/produtos.html", {"produtos": filtrar(busca), "busca": busca})
 
 
+def link_arquivo(arquivo):
+    """(nome, url) do arquivo atual de um campo, ou None. Aceita caminho /static/... e link http(s)."""
+    if not arquivo:
+        return None
+    nome = arquivo.name
+    if nome.startswith(("/", "http://", "https://")):
+        url = nome  # valores fixos (/static/modelos/...) ou links externos: como estão
+    else:
+        url = arquivo.url  # arquivo enviado: a URL vem do storage configurado (não MEDIA_URL + nome)
+    return nome.rsplit("/", 1)[-1], url
+
+
 @somente_staff
 def painel_produto_form(request, id=None):
     produto = get_object_or_404(PRODUTOS, id=id) if id is not None else None
-    if request.method == "POST":
-        messages.info(request, "Salvar simulado: ainda não grava no banco.")
-        return redirect("loja:painel_produtos")
-    return render(request, "painel/produto_form.html", {"produto": produto})
+    form = ProdutoForm(request.POST or None, request.FILES or None, instance=produto)
+    if request.method == "POST" and form.is_valid():
+        try:
+            # INSERT (novo) ou UPDATE (edição). Os uploads são gravados no storage ANTES do INSERT/UPDATE.
+            # O atomic desfaz só o banco: se o banco falhar depois, o arquivo já gravado fica órfão no
+            # storage (não há limpeza automática; pode ser apagado à mão em media/).
+            with transaction.atomic():
+                salvo = form.save()
+        except OSError:  # disco cheio, sem permissão, sistema de arquivos somente leitura...
+            form.add_error(None, "Não foi possível gravar os arquivos enviados. Nada foi salvo; tente de novo "
+                                 "ou salve sem anexos.")
+        except DatabaseError:
+            form.add_error(None, "Erro ao salvar no banco de dados. Nada foi salvo; tente de novo.")
+        else:
+            acao = "atualizado" if produto else "cadastrado"
+            messages.success(request, f"Produto “{salvo.nome}” {acao}.")
+            return redirect("loja:painel_produtos")
+    # GET ou POST inválido (200 com os erros e o que foi digitado no form).
+    # O is_valid() altera a instância em memória: a prévia e os arquivos atuais vêm do banco.
+    if produto is not None and form.is_bound:
+        produto = get_object_or_404(PRODUTOS, id=id)
+    atuais = {campo: link_arquivo(getattr(produto, campo)) if produto else None
+              for campo in ("imagem", "imagem_2", "modelo_3d")}
+    return render(request, "painel/produto_form.html", {"produto": produto, "form": form, "atuais": atuais,
+                                                        "uploads_habilitados": uploads_habilitados()})
 
 
 @somente_staff
 @require_POST
 def painel_produto_excluir(request, id):
-    messages.error(request, "Exclusão simulada: ainda não apaga do banco.")
+    produto = get_object_or_404(Produto, id=id)
+    try:
+        produto.delete()  # DELETE; arquivos de mídia ficam no disco
+    except ProtectedError:  # Pedido.produto é PROTECT
+        total = produto.pedido_set.count()
+        messages.error(request, f"O produto “{produto.nome}” tem {total} pedido(s) e não pode ser excluído. "
+                                "Para tirá-lo de venda, zere o estoque.")
+    else:
+        messages.success(request, f"Produto “{produto.nome}” excluído.")
     return redirect("loja:painel_produtos")
 
 
@@ -149,14 +288,38 @@ def painel_categorias(request):
 @somente_staff
 @require_POST
 def painel_categoria_salvar(request, id=None):  # sem id = nova
-    messages.info(request, "Salvar simulado: ainda não grava no banco.")
+    categoria = get_object_or_404(Categoria, id=id) if id is not None else None
+    antigo = categoria.nome if categoria else None
+    form = CategoriaForm(request.POST, instance=categoria)
+    if not form.is_valid():
+        erros = " ".join(e for lista in form.errors.values() for e in lista)
+        messages.error(request, f"Categoria não salva: {erros}")
+        return redirect("loja:painel_categorias")
+    try:
+        with transaction.atomic():  # corrida: o índice único do banco decide
+            salva = form.save()  # INSERT ou UPDATE
+    except IntegrityError:
+        messages.error(request, f"Categoria não salva: {CATEGORIA_REPETIDA}")
+    else:
+        if antigo is None:
+            messages.success(request, f"Categoria “{salva.nome}” criada.")
+        else:
+            messages.success(request, f"Categoria “{antigo}” renomeada para “{salva.nome}”.")
     return redirect("loja:painel_categorias")
 
 
 @somente_staff
 @require_POST
 def painel_categoria_excluir(request, id):
-    messages.error(request, "Exclusão simulada: ainda não apaga do banco.")
+    categoria = get_object_or_404(Categoria, id=id)
+    try:
+        categoria.delete()  # DELETE
+    except ProtectedError:  # Produto.categoria é PROTECT
+        total = categoria.produto_set.count()
+        messages.error(request, f"A categoria “{categoria.nome}” tem {total} produto(s) e não pode ser excluída. "
+                                "Mova ou exclua esses produtos antes.")
+    else:
+        messages.success(request, f"Categoria “{categoria.nome}” excluída.")
     return redirect("loja:painel_categorias")
 
 

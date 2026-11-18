@@ -182,16 +182,16 @@ class PainelProtegidoTest(TestCase):
             self.assertEqual(self.client.get(url).status_code, 200, url)
         for url in self.rotas_post():
             r = self.client.post(url, {"nome": "x"})
-            self.assertEqual(r.status_code, 302, url)
-            self.assertTrue(r.url.startswith("/painel/"), url)  # simulado: volta para a lista do painel
-        # CRUD ainda simulado: nada foi apagado
-        self.assertTrue(Produto.objects.filter(id=self.prod_id).exists())
-        self.assertTrue(Categoria.objects.filter(id=self.cat_id).exists())
+            # staff chega na view: form com erros (200) ou volta para o painel (302) — nunca login/home
+            self.assertIn(r.status_code, (200, 302), url)
+            if r.status_code == 302:
+                self.assertTrue(r.url.startswith("/painel/"), url)
 
     def test_mensagem_aparece_uma_vez_no_painel(self):
         self.client.force_login(self.staff)
-        r = self.client.post(reverse("loja:painel_produto_excluir", args=[self.prod_id]), follow=True)
-        self.assertEqual(r.content.decode().count("Exclusão simulada"), 1)
+        # categoria com produto: exclusão bloqueada, a mensagem aparece uma única vez
+        r = self.client.post(reverse("loja:painel_categoria_excluir", args=[self.cat_id]), follow=True)
+        self.assertEqual(r.content.decode().count("não pode ser excluída"), 1)
 
 
 class MenuTest(TestCase):

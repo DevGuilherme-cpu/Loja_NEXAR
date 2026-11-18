@@ -11,48 +11,58 @@
 
 {% if form.errors %}
   <div class="erro" role="alert">
-    {% for erros in form.errors.values %}{% for e in erros %}<p>{{ e }}</p>{% endfor %}{% endfor %}
+    {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+    {% for campo in form %}{% for e in campo.errors %}<p>{{ campo.label }}: {{ e }}</p>{% endfor %}{% endfor %}
+    {% if request.FILES %}<p>Por segurança o navegador não guarda arquivos escolhidos: selecione as fotos/modelo de novo antes de salvar.</p>{% endif %}
   </div>
+{% endif %}
+
+{% if not uploads_habilitados %}
+  <p class="aviso" role="status">Envio de arquivos desativado neste ambiente (a hospedagem não guarda arquivos). Fotos e modelo 3D atuais são mantidos; os demais campos podem ser salvos normalmente.</p>
 {% endif %}
 
 <form class="form-painel" method="post" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="form-campos">
     <label class="campo largo">Nome
-      <input type="text" name="nome" value="{{ produto.nome|default:'' }}" maxlength="100" required>
+      <input type="text" name="nome" value="{{ form.nome.value|default_if_none:'' }}" maxlength="100" required>
     </label>
     <label class="campo">Preço (R$)
-      <input type="number" name="preco" value="{% if produto %}{{ produto.preco|unlocalize }}{% endif %}" min="0" step="0.01" required>
+      <input type="number" name="preco" value="{{ form.preco.value|default_if_none:''|unlocalize }}" min="0" step="0.01" required>
     </label>
     <label class="campo">Estoque
-      <input type="number" name="estoque" value="{{ produto.estoque|default:0 }}" min="0" step="1" required>
+      <input type="number" name="estoque" value="{{ form.estoque.value|default_if_none:'' }}" min="0" step="1" required>
     </label>
     <label class="campo largo">Categoria
       <select name="categoria" required>
         <option value="">Escolha...</option>
         {% for c in categorias %}
-          <option value="{{ c.id }}" {% if produto.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+          <option value="{{ c.id }}" {% if form.categoria.value|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>{{ c.nome }}</option>
         {% endfor %}
       </select>
     </label>
     <label class="campo largo">Descrição
-      <textarea name="descricao" rows="4">{{ produto.descricao|default:'' }}</textarea>
+      <textarea name="descricao" rows="4">{{ form.descricao.value|default_if_none:'' }}</textarea>
     </label>
     <label class="campo">Cor da peça
-      <input type="color" name="cor" value="{{ produto.cor|default:'#22306B' }}">
+      <input type="color" name="cor" value="{{ form.cor.value|default:'#22306B' }}">
+      <small><input type="checkbox" name="cor_automatica" {% if form.cor_automatica.value %}checked{% endif %}> Cor automática (o 3D escolhe; desmarque para usar a cor acima)</small>
       <small>Muda a cor do 3D na prévia ao lado.</small>
     </label>
     <label class="campo">Foto
-      <input type="file" name="imagem" accept="image/*">
+      <input type="file" name="imagem" accept="image/*"{% if not uploads_habilitados %} disabled{% endif %}>
       <small>Opcional. Sem foto, o site desenha a peça em 3D.</small>
+      {% if atuais.imagem %}<small>Atual: <a class="link" href="{{ atuais.imagem.1 }}" target="_blank" rel="noopener">{{ atuais.imagem.0 }}</a> (envie outra para trocar)</small>{% endif %}
     </label>
     <label class="campo">Foto vestindo
-      <input type="file" name="imagem_2" accept="image/*">
+      <input type="file" name="imagem_2" accept="image/*"{% if not uploads_habilitados %} disabled{% endif %}>
       <small>Opcional. Aparece quando o mouse passa no card.</small>
+      {% if atuais.imagem_2 %}<small>Atual: <a class="link" href="{{ atuais.imagem_2.1 }}" target="_blank" rel="noopener">{{ atuais.imagem_2.0 }}</a> (envie outra para trocar)</small>{% endif %}
     </label>
     <label class="campo">Modelo 3D (.glb)
-      <input type="file" name="modelo_3d" accept=".glb,model/gltf-binary">
+      <input type="file" name="modelo_3d" accept=".glb,model/gltf-binary"{% if not uploads_habilitados %} disabled{% endif %}>
       <small>Opcional. Sem modelo, o site gera a peça pela categoria.</small>
+      {% if atuais.modelo_3d %}<small>Atual: <a class="link" href="{{ atuais.modelo_3d.1 }}" target="_blank" rel="noopener">{{ atuais.modelo_3d.0 }}</a> (envie outro para trocar)</small>{% endif %}
     </label>
     <div class="largo">
       <button class="btn" type="submit">{% if produto %}Salvar alterações{% else %}Cadastrar produto{% endif %}</button>

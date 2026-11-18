@@ -126,6 +126,8 @@ AUTH_PASSWORD_VALIDATORS = [
 LOGIN_URL = "loja:entrar"
 LOGIN_REDIRECT_URL = "loja:index"
 LOGOUT_REDIRECT_URL = "loja:index"
+# testes gravam a mídia num diretório temporário (nunca no media/ real)
+TEST_RUNNER = "config.test_runner.MediaIsoladaRunner"
 
 
 # Internationalization
@@ -150,3 +152,9 @@ WHITENOISE_USE_FINDERS = True
 # uploads (na Vercel o MEDIA_URL vem do ambiente)
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = BASE_DIR / "media"
+# Upload de arquivos pelo painel: ligado só com DEBUG=True fora da Vercel (o Django só serve MEDIA com
+# DEBUG). Em produção fica desligado mesmo se a Vercel não expuser VERCEL=1; o form recusa arquivos com
+# aviso. A variável UPLOADS_HABILITADOS=True/False sempre vence. Regra em loja/uploads.py.
+from loja.uploads import uploads_habilitados  # noqa: E402 (módulo puro, sem Django)
+
+UPLOADS_HABILITADOS = uploads_habilitados(DEBUG, os.environ)
