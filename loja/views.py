@@ -19,7 +19,8 @@ from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaF
                     uploads_habilitados)
 from .assistente import SUGESTOES, responder
 from .models import Categoria, Pedido, Produto
-from .painel import PERIODOS, resumo
+from .painel import CD, PERIODOS, entregas, resumo
+from .simulacao import simular_pedidos
 
 # produtos já com a categoria (JOIN)
 PRODUTOS = Produto.objects.select_related("categoria")
@@ -237,9 +238,22 @@ def painel_assistente(request):
 
 
 @somente_staff
+@require_POST
+def painel_simular(request):
+    criados = simular_pedidos()
+    if criados:
+        messages.success(request, f"{len(criados)} pedidos de exemplo criados. Veja o mapa em Pedidos.")
+    else:
+        messages.error(request, "Todos os produtos estão esgotados: aumente o estoque para simular vendas.")
+    return redirect("loja:painel_inicio")
+
+
+@somente_staff
 def painel_produtos(request):
     busca = request.GET.get("busca", "").strip()
-    return render(request, "painel/produtos.html", {"produtos": filtrar(busca), "busca": busca})
+    categoria = request.GET.get("categoria", "")
+    return render(request, "painel/produtos.html",
+                  {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria})
 
 
 def link_arquivo(arquivo):
@@ -301,7 +315,8 @@ def painel_produto_excluir(request, id):
 
 @somente_staff
 def painel_categorias(request):
-    lista = Categoria.objects.annotate(total=Count("produto"))
+    # prefetch: as fotos dos produtos de cada categoria saem numa consulta só
+    lista = Categoria.objects.annotate(total=Count("produto")).prefetch_related("produto_set")
     return render(request, "painel/categorias.html", {"lista": lista})
 
 
@@ -347,4 +362,5 @@ def painel_categoria_excluir(request, id):
 def painel_pedidos(request):
     # JOIN pedidos + usuário + produto + categoria
     pedidos = Pedido.objects.select_related("usuario", "produto__categoria")
-    return render(request, "painel/pedidos.html", {"pedidos": pedidos})
+    return render(request, "painel/pedidos.html",
+                  {"pedidos": pedidos, "entregas": entregas(pedidos[:12]), "cd": CD})

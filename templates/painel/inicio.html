@@ -6,11 +6,18 @@
 {% block painel %}
 <div class="painel-topo">
   <h1>Visão geral</h1>
-  <nav class="periodos" aria-label="Período">
-    {% for p in periodos %}
-      <a href="?dias={{ p }}" {% if p == dias %}aria-current="page"{% endif %}>{{ p }} dias</a>
-    {% endfor %}
-  </nav>
+  <div class="painel-topo-acoes">
+    <nav class="periodos" aria-label="Período">
+      {% for p in periodos %}
+        <a href="?dias={{ p }}" {% if p == dias %}aria-current="page"{% endif %}>{{ p }} dias</a>
+      {% endfor %}
+    </nav>
+    <form method="post" action="{% url 'loja:painel_simular' %}">
+      {% csrf_token %}
+      <button class="btn" type="submit" aria-describedby="simular-dica">Gerar vendas de exemplo</button>
+      <span class="sr" id="simular-dica">Cria 6 pedidos fictícios, com baixa de estoque</span>
+    </form>
+  </div>
 </div>
 
 <div class="dash">

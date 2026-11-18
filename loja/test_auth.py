@@ -154,6 +154,7 @@ class PainelProtegidoTest(TestCase):
     def rotas_post(self):
         return [
             reverse("loja:painel_assistente"),
+            reverse("loja:painel_simular"),
             reverse("loja:painel_produto_novo"),
             reverse("loja:painel_produto_editar", args=[self.prod_id]),
             reverse("loja:painel_produto_excluir", args=[self.prod_id]),

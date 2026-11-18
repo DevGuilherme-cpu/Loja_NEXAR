@@ -57,6 +57,36 @@ def barras(contagem, formato=str, limite=None):
     return [{"nome": nome, "texto": formato(v), "pct": round(v / maior * 100)} for nome, v in itens]
 
 
+# Mapa de entregas (simulação): o Pedido não tem endereço, então cada pedido recebe uma capital
+# fixa pelo número dele e sai do centro de distribuição em São Paulo.
+CD = {"cidade": "São Paulo", "uf": "SP", "lon": -46.63, "lat": -23.55}
+CIDADES = [
+    ("Rio de Janeiro", "RJ", -43.20, -22.91), ("Belo Horizonte", "MG", -43.94, -19.92),
+    ("Vitória", "ES", -40.31, -20.32), ("Curitiba", "PR", -49.27, -25.43),
+    ("Florianópolis", "SC", -48.55, -27.60), ("Porto Alegre", "RS", -51.23, -30.03),
+    ("Brasília", "DF", -47.88, -15.79), ("Goiânia", "GO", -49.25, -16.68),
+    ("Campo Grande", "MS", -54.62, -20.47), ("Cuiabá", "MT", -56.10, -15.60),
+    ("Salvador", "BA", -38.50, -12.97), ("Aracaju", "SE", -37.07, -10.91),
+    ("Maceió", "AL", -35.73, -9.67), ("Recife", "PE", -34.88, -8.05),
+    ("João Pessoa", "PB", -34.86, -7.12), ("Natal", "RN", -35.21, -5.79),
+    ("Fortaleza", "CE", -38.54, -3.72), ("Teresina", "PI", -42.80, -5.09),
+    ("São Luís", "MA", -44.30, -2.53), ("Belém", "PA", -48.50, -1.46),
+    ("Macapá", "AP", -51.07, 0.03), ("Manaus", "AM", -60.02, -3.12),
+    ("Boa Vista", "RR", -60.67, 2.82), ("Porto Velho", "RO", -63.90, -8.76),
+    ("Rio Branco", "AC", -67.81, -9.97), ("Palmas", "TO", -48.33, -10.18),
+]
+
+
+def entregas(pedidos):
+    lista = []
+    for p in pedidos:
+        cidade, uf, lon, lat = CIDADES[(p.id * 7) % len(CIDADES)]
+        lista.append({"id": p.id, "cliente": p.usuario.get_username(),
+                      "produto": f"{p.quantidade}× {p.produto.nome}", "total": reais(valor(p)),
+                      "cidade": cidade, "uf": uf, "lon": lon, "lat": lat})
+    return lista
+
+
 def resumo(dias=30):
     hoje = timezone.localdate()
     inicio = inicio_do_dia(hoje - timedelta(days=dias - 1))

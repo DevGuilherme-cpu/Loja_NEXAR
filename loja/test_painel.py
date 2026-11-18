@@ -54,6 +54,40 @@ class PainelVisaoGeralTest(TestCase):
         self.assertEqual(r.json()["resposta"], "O ticket médio desde o início é R$ 300,00 (1 pedido).")
 
 
+class PainelTelasTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("popular_loja", verbosity=0)
+        cls.staff = User.objects.create_user("chefe", password="x", is_staff=True)
+
+    def setUp(self):
+        self.client.force_login(self.staff)
+
+    def test_simular_vendas_cria_pedidos_e_baixa_estoque(self):
+        estoque_antes = sum(Produto.objects.values_list("estoque", flat=True))
+        pedidos_antes = Pedido.objects.count()
+        r = self.client.post(reverse("loja:painel_simular"), follow=True)
+        novos = Pedido.objects.count() - pedidos_antes
+        self.assertEqual(novos, 6)
+        self.assertContains(r, "6 pedidos de exemplo criados")
+        vendidas = sum(Pedido.objects.order_by("-id").values_list("quantidade", flat=True)[:novos])
+        self.assertEqual(sum(Produto.objects.values_list("estoque", flat=True)), estoque_antes - vendidas)
+
+    def test_pedidos_mostram_mapa_de_entregas(self):
+        r = self.client.get(reverse("loja:painel_pedidos"))
+        self.assertContains(r, "Entregas ao vivo")
+        self.assertContains(r, 'id="dados-entregas"')
+        cidades = {e["cidade"] for e in r.context["entregas"]}
+        self.assertEqual(len(cidades), len(r.context["entregas"]))  # 5 pedidos, 5 destinos diferentes
+
+    def test_produtos_filtra_por_categoria_e_categorias_mostram_fotos(self):
+        moletons = Categoria.objects.get(nome="Moletons")
+        r = self.client.get(reverse("loja:painel_produtos"), {"categoria": moletons.id})
+        self.assertEqual({p.categoria_id for p in r.context["produtos"]}, {moletons.id})
+        r = self.client.get(reverse("loja:painel_categorias"))
+        self.assertContains(r, "moletom-heavy-1.jpg")
+
+
 class MigrarTudoTest(TestCase):
     @mock.patch("subprocess.run")
     def test_roda_no_local_e_no_supabase(self, run):

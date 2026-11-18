@@ -1,12 +1,51 @@
 {% extends "painel/base_painel.html" %}
+{% load static %}
 
 {% block titulo %}Pedidos — Painel NEXAR{% endblock %}
 
 {% block painel %}
 <div class="painel-topo">
-  <h1>Pedidos</h1>
-  <span class="contador">{{ pedidos|length }} pedido{{ pedidos|length|pluralize }}</span>
+  <div>
+    <h1>Pedidos</h1>
+    <p class="contador">{{ pedidos|length }} pedido{{ pedidos|length|pluralize }}</p>
+  </div>
 </div>
+
+{% if entregas %}
+<section class="cartao entregas" aria-labelledby="entregas-titulo">
+  <div class="cartao-topo">
+    <h2 id="entregas-titulo">Entregas ao vivo</h2>
+    <p>Simulação: cada pedido sai do centro de distribuição em {{ cd.cidade }} para uma capital fictícia.</p>
+  </div>
+
+  <div class="entregas-numeros" aria-live="polite">
+    <p><b data-conta="rota">0</b> em rota</p>
+    <p><b data-conta="separando">0</b> separando</p>
+    <p><b data-conta="entregue">0</b> entregues</p>
+  </div>
+
+  <div class="entregas-corpo">
+    <div class="mapa" id="mapa" role="img"
+         aria-label="Mapa do Brasil com {{ entregas|length }} entregas saindo de {{ cd.cidade }}. A lista ao lado mostra o andamento de cada uma."></div>
+
+    <ol class="entregas-lista" id="entregas-lista">
+      {% for e in entregas %}
+        <li>
+          <button type="button" data-id="{{ e.id }}">
+            <span class="entrega-linha"><b>#{{ e.id }} {{ e.cliente }}</b><span>{{ e.total }}</span></span>
+            <span class="entrega-produto">{{ e.produto }}</span>
+            <span class="entrega-destino">{{ cd.cidade }} até {{ e.cidade }} ({{ e.uf }})</span>
+            <span class="entrega-trilho" aria-hidden="true"><span></span></span>
+            <span class="entrega-status">Calculando rota...</span>
+          </button>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {{ entregas|json_script:"dados-entregas" }}
+  {{ cd|json_script:"dados-cd" }}
+</section>
+{% endif %}
 
 <div class="tabela-wrap">
   <table class="tabela">
@@ -31,4 +70,8 @@
     </tbody>
   </table>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/mapa.js' %}"></script>
 {% endblock %}

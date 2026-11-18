@@ -955,6 +955,429 @@ img[data-thumb]:not([src]) {
   white-space: pre-line;
 }
 
+/* produtos e categorias em cards */
+.filtro-painel {
+  margin-bottom: 1.5rem;
+}
+
+.filtro-painel .chip {
+  font-size: .9rem;
+}
+
+.grade-painel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.75rem 1.25rem;
+}
+
+.item-produto {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.item-produto .card-img {
+  display: block;
+}
+
+.card-tag-3d {
+  top: auto;
+  bottom: .75rem;
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.item-info h2 {
+  font-size: var(--t0);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.item-produto:hover .item-info h2 {
+  color: var(--eixo-z);
+}
+
+.item-preco {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-estoque {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  margin-top: .4rem;
+  color: var(--nevoa);
+  font-size: .85rem;
+}
+
+.item-estoque-trilho {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--palco);
+  overflow: hidden;
+}
+
+.item-estoque-trilho span {
+  display: block;
+  width: min(var(--pct), 100%);
+  height: 100%;
+  border-radius: 3px;
+  background: var(--tinta);
+  transform-origin: left;
+  animation: encher .7s var(--ease) backwards;
+}
+
+.item-estoque.baixo {
+  color: var(--eixo-x);
+  font-weight: 600;
+}
+
+.item-estoque.baixo .item-estoque-trilho span {
+  background: var(--eixo-x);
+}
+
+.item-produto .acoes {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.item-produto .btn-sm {
+  background: var(--palco);
+}
+
+.item-produto .btn-sm:hover {
+  background: var(--tinta);
+}
+
+.item-produto .btn-sm.perigo:hover {
+  background: var(--eixo-x);
+}
+
+.item-novo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  aspect-ratio: 4 / 5;
+  border: 2px dashed var(--palco-escuro);
+  border-radius: var(--r);
+  color: var(--nevoa);
+  font-weight: 600;
+  transition: border-color .2s, color .2s, background .2s;
+}
+
+.item-novo span {
+  font-size: var(--t4);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.item-novo:hover {
+  border-color: var(--eixo-z);
+  color: var(--eixo-z);
+  background: var(--palco);
+}
+
+.grade-categorias {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem 1.25rem;
+}
+
+.item-categoria {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+
+.mosaico {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r);
+  background: var(--palco);
+  transition: transform .4s var(--ease);
+}
+
+.mosaico img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  background: var(--palco);
+  transition: transform .6s var(--ease);
+}
+
+/* 1 foto ocupa tudo; 2 lado a lado; 3 = uma grande e duas pequenas */
+.mosaico-1 img {
+  grid-column: 1 / -1;
+  grid-row: 1 / 3;
+}
+
+.mosaico-2 img {
+  grid-row: 1 / 3;
+}
+
+.mosaico-3 img:first-child {
+  grid-row: 1 / 3;
+}
+
+.mosaico:hover img {
+  transform: scale(1.05);
+}
+
+.mosaico-vazio {
+  grid-column: 1 / -1;
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  color: var(--nevoa);
+}
+
+.item-categoria-nome .input-tabela {
+  font-size: var(--t1);
+  font-weight: 700;
+  padding-left: .4rem;
+  margin-left: -.4rem;
+}
+
+.item-categoria .acoes {
+  justify-content: flex-start;
+}
+
+.item-categoria .btn-sm {
+  background: var(--palco);
+}
+
+.item-categoria .btn-sm:hover {
+  background: var(--tinta);
+}
+
+.item-categoria .btn-sm.perigo:hover {
+  background: var(--eixo-x);
+}
+
+.item-categoria .btn-sm:disabled,
+.item-categoria .btn-sm:disabled:hover {
+  background: var(--palco);
+  color: var(--eixo-x);
+}
+
+/* entregas (mapa simulado em static/js/mapa.js) */
+.entregas {
+  margin-bottom: 1.5rem;
+}
+
+.entregas-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.75rem;
+  margin-bottom: 1rem;
+  color: var(--nevoa);
+}
+
+.entregas-numeros b {
+  margin-right: .2rem;
+  color: var(--tinta);
+  font-stretch: 125%;
+  font-weight: 850;
+  font-size: var(--t2);
+  font-variant-numeric: tabular-nums;
+}
+
+.entregas-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.mapa {
+  border-radius: var(--r);
+  background: var(--papel);
+}
+
+.mapa svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+}
+
+.mapa-pais {
+  fill: var(--palco);
+  stroke: var(--palco-escuro);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.mapa-rota {
+  fill: none;
+  stroke: var(--nevoa);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  opacity: .5;
+  transition: opacity .3s, stroke-width .3s;
+}
+
+.mapa-rota.ativa {
+  stroke: var(--eixo-z);
+  stroke-width: 2;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+.mapa-destino {
+  fill: var(--papel);
+  stroke: var(--tinta);
+  stroke-width: 1.5;
+}
+
+.mapa-destino.chegou {
+  fill: var(--eixo-y);
+  stroke: var(--eixo-y);
+}
+
+.mapa-destino.ativo {
+  stroke: var(--eixo-z);
+  stroke-width: 2.5;
+}
+
+.mapa-cd {
+  fill: var(--eixo-x);
+}
+
+.mapa-cd-halo {
+  fill: var(--eixo-x);
+  opacity: .2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: halo 2s ease-out infinite;
+}
+
+@keyframes halo {
+  from {
+    transform: scale(.6);
+    opacity: .45;
+  }
+
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.mapa-rotulo {
+  fill: var(--tinta);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mapa-veiculo {
+  cursor: pointer;
+}
+
+.mapa-carroceria {
+  fill: var(--tinta);
+  stroke: var(--papel);
+  stroke-width: 1;
+}
+
+.mapa-cabine {
+  fill: var(--nevoa);
+  stroke: var(--papel);
+  stroke-width: 1;
+}
+
+.mapa-veiculo.parado {
+  opacity: .35;
+}
+
+.mapa-veiculo.ativo .mapa-carroceria,
+.mapa-veiculo:hover .mapa-carroceria {
+  fill: var(--eixo-z);
+}
+
+.mapa-veiculo.ativo {
+  opacity: 1;
+}
+
+.entregas-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.entregas-lista button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  padding: .8rem .9rem;
+  border: 2px solid transparent;
+  border-radius: var(--r-pequeno);
+  background: var(--papel);
+  font-size: .85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+
+.entregas-lista button:hover,
+.entregas-lista button[aria-pressed="true"] {
+  border-color: var(--eixo-z);
+}
+
+.entrega-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  font-size: .9rem;
+}
+
+.entrega-produto,
+.entrega-destino {
+  color: var(--nevoa);
+}
+
+.entrega-trilho {
+  height: 5px;
+  margin: .35rem 0 .15rem;
+  border-radius: 3px;
+  background: var(--palco);
+  overflow: hidden;
+}
+
+.entrega-trilho span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--tinta);
+  transition: width .5s linear;
+}
+
+.entrega-status {
+  font-weight: 600;
+}
+
+[data-estado="entregue"] .entrega-trilho span {
+  background: var(--eixo-y);
+}
+
+[data-estado="entregue"] .entrega-status {
+  color: var(--eixo-y);
+}
+
 /* visão geral */
 .periodos {
   display: flex;
@@ -1487,6 +1910,59 @@ img[data-thumb]:not([src]) {
   min-height: 400px;
 }
 
+.previa-titulo {
+  margin-top: 1rem;
+  font-weight: 700;
+}
+
+.previa-card {
+  width: min(100%, 230px);
+}
+
+.previa-card-img {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--r);
+  background: var(--palco);
+}
+
+.previa-card-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: chegar .4s var(--ease);
+}
+
+/* foto vestindo aparece ao passar o mouse, como no card da loja */
+.previa-card-img [data-previa="foto2"] {
+  clip-path: inset(100% 0 0 0);
+  transition: clip-path .6s var(--ease);
+}
+
+.previa-card:hover [data-previa="foto2"] {
+  clip-path: inset(0);
+}
+
+.previa-sem-foto {
+  padding: 1.5rem;
+  color: var(--nevoa);
+  font-size: .85rem;
+  text-align: center;
+}
+
+.previa-card.tem-foto .previa-sem-foto {
+  display: none;
+}
+
+.previa-card .card-info {
+  font-size: .9rem;
+}
+
 /* rodapé */
 .rodape {
   margin-top: 4rem;
@@ -1564,8 +2040,13 @@ img[data-thumb]:not([src]) {
     position: static;
   }
 
-  .dash {
+  .dash,
+  .entregas-corpo {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .entregas-lista {
+    max-height: 360px;
   }
 
   .kpis {
