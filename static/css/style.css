@@ -189,6 +189,10 @@ textarea {
   color: var(--nevoa);
 }
 
+
+/* Botão Sair (form POST) com a mesma aparência dos links do topo */
+.topo-sair button { padding: .2rem 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.topo-sair button:hover { color: var(--eixo-z); }
 .topo-busca input {
   width: 9rem;
   padding: .45rem .9rem;

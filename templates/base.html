@@ -41,6 +41,8 @@
       {% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}
       {% if user.is_authenticated %}
         <span class="topo-usuario">Olá, {{ user.username }}</span>
+        {# Logout do Django só aceita POST (GET não desloga) #}
+        <form class="topo-sair" method="post" action="{% url 'loja:sair' %}">{% csrf_token %}<button type="submit">Sair</button></form>
       {% else %}
         <a href="{% url 'loja:entrar' %}">Entrar</a>
       {% endif %}
@@ -65,8 +67,13 @@
       </nav>
       <nav aria-label="Conta">
         <h2>Conta</h2>
-        <a href="{% url 'loja:entrar' %}">Entrar</a>
-        <a href="{% url 'loja:cadastro' %}">Criar conta</a>
+        {% if user.is_authenticated %}
+          <p>{{ user.get_username }}</p>
+          {% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}
+        {% else %}
+          <a href="{% url 'loja:entrar' %}">Entrar</a>
+          <a href="{% url 'loja:cadastro' %}">Criar conta</a>
+        {% endif %}
       </nav>
       <div>
         <h2>Sobre</h2>

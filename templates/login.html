@@ -12,7 +12,7 @@
   <form class="auth-form" method="post">
     {% csrf_token %}
     <h1>Entrar</h1>
-    {% if form.errors %}<p class="erro" role="alert">Usuário ou senha incorretos.</p>{% endif %}
+    {% if form.errors %}<p class="erro" role="alert">{% if form.non_field_errors %}{{ form.non_field_errors.0 }}{% else %}Usuário ou senha incorretos.{% endif %}</p>{% endif %}
     <label class="campo">Usuário
       <input type="text" name="username" value="{{ form.username.value|default:'' }}" autocomplete="username" required>
     </label>
