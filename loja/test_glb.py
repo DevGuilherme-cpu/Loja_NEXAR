@@ -66,7 +66,7 @@ class ValidarGlbTest(SimpleTestCase):
         self.validar(montar(chunk_json(), chunk(0x12345678, b"x")))
 
     def test_modelos_reais_do_projeto(self):
-        for nome in ("oculos.glb", "tenis.glb"):
+        for nome in ("oculos.glb", "tenis-nexar.glb"):
             with self.subTest(nome), open(Path(settings.BASE_DIR) / "static" / "modelos" / nome, "rb") as f:
                 validar_glb(f, LIMITE)
                 self.assertEqual(f.tell(), 0)
