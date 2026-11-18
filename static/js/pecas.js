@@ -184,6 +184,14 @@ export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, t
         const mapa = prim?.extensions?.KHR_materials_variants?.mappings?.find(x => x.material === prim.material);
         peca.userData.variantes = { nomes, parser: gltf.parser, padrao: mapa ? nomes[mapa.variants[0]] : nomes[0] };
       }
+      if (!peca.userData.partes && !variantes) {
+        peca.userData.tingivel = true;
+        if (cor) tingir(peca, cor);
+        // uma "parte" só: o painel de personalizar da loja deixa trocar a cor da peça inteira
+        const malhas = [];
+        peca.traverse(m => { if (m.isMesh) malhas.push(m); });
+        peca.userData.partes = { cor: malhas };
+      }
       return peca;
     } catch (erro) {
       console.warn('Modelo 3D não carregou, usando peça gerada:', erro);
@@ -195,8 +203,19 @@ export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, t
   return peca;
 }
 
+// .glb de uma cor só (sem partes nem combinações): a cor do produto tinge a textura,
+// por isso o modelo é gerado em branco/cinza claro e um arquivo serve para todas as cores
+function tingir(peca, cor) {
+  peca.traverse(m => {
+    if (!m.isMesh) return;
+    m.material = m.userData.materialTingido ??= m.material.clone();
+    m.material.color.set(cor);
+  });
+}
+
 // troca a cor da peça inteira (painel)
 export function pintar(peca, cor) {
+  if (peca.userData.tingivel) { tingir(peca, cor); return; }
   if (!peca.userData.gerada) return;
   peca.traverse(m => {
     if (!m.isMesh || !m.material.sheenColor) return;
@@ -224,11 +243,31 @@ export async function aplicarVariante(peca, nome) {
   await Promise.all(trocas);
 }
 
+// nível escolhido por static/js/qualidade.js (alto, medio ou baixo)
+export const QUALIDADE = document.documentElement.dataset.qualidade || 'alto';
+const TETO_PIXELS = { alto: 2, medio: 1.5, baixo: 1 };
+
 export function criarRenderer(canvas, opcoes = {}, maxPixelRatio = 2) {
-  const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, ...opcoes });
-  r.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio));
+  const r = new THREE.WebGLRenderer({
+    canvas, antialias: QUALIDADE !== 'baixo', alpha: true, powerPreference: 'high-performance', ...opcoes,
+  });
+  r.setPixelRatio(Math.min(devicePixelRatio, maxPixelRatio, TETO_PIXELS[QUALIDADE]));
   r.toneMapping = THREE.ACESFilmicToneMapping;
   return r;
+}
+
+// Mede o FPS de verdade e baixa a resolução do canvas se o aparelho estiver travando.
+// Chamar a função devolvida a cada quadro do loop.
+export function vigiar(renderer) {
+  let quadros = 0, inicio = performance.now();
+  return () => {
+    if (++quadros < 90) return;
+    const fps = quadros * 1000 / (performance.now() - inicio);
+    quadros = 0;
+    inicio = performance.now();
+    const atual = renderer.getPixelRatio();
+    if (fps < 45 && atual > 0.75) renderer.setPixelRatio(Math.max(0.75, atual - 0.25));
+  };
 }
 
 // cena com iluminação

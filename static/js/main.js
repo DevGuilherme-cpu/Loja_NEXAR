@@ -1,11 +1,13 @@
 // Animações gerais do site
 (() => {
   const anima = window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const temMouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  // nível escolhido por qualidade.js: no baixo, a rolagem é a do navegador e os cards não inclinam
+  const leve = document.documentElement.dataset.qualidade === 'baixo';
+  const temMouse = !leve && matchMedia('(hover: hover) and (pointer: fine)').matches;
   if (!anima) return;
 
   // rolagem suave
-  if (window.Lenis) {
+  if (window.Lenis && !leve) {
     const lenis = new Lenis({ lerp: 0.12 });
     gsap.ticker.add(t => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);

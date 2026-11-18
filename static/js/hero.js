@@ -1,6 +1,6 @@
 // Hero da home: peças em destaque caindo no palco
 import * as THREE from 'three';
-import { criarRenderer, criarCena, criarModelo } from './pecas.js';
+import { criarRenderer, criarCena, criarModelo, vigiar } from './pecas.js';
 
 const canvas = document.getElementById('hero-3d');
 const anima = window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -68,6 +68,7 @@ let visivel = true;
 new IntersectionObserver(([e]) => { visivel = e.isIntersecting; }).observe(canvas);
 
 const relogio = new THREE.Clock();
+const medir = vigiar(renderer);
 renderer.setAnimationLoop(() => {
   if (!visivel) return;
   const t = anima ? relogio.getElapsedTime() : 0;
@@ -83,4 +84,5 @@ renderer.setAnimationLoop(() => {
   grupo.rotation.y += (mouse.x * 0.35 - grupo.rotation.y) * 0.06;
   grupo.position.y = rolagem * 2.2;
   renderer.render(cena, camera);
+  medir();
 });

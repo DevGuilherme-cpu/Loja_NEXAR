@@ -5,6 +5,11 @@ from types import SimpleNamespace
 
 SAPATO_3D = "/static/modelos/tenis-nexar.glb"  # modelo próprio (Meshy + Blender)
 OCULOS_3D = "/static/modelos/oculos.glb"  # Khronos Group, CC BY 4.0
+# roupas: modelos próprios do Meshy em branco, o site tinge com a cor do produto
+CAMISETA_3D = "/static/modelos/camiseta.glb"
+MOLETOM_3D = "/static/modelos/moletom.glb"
+CALCA_3D = "/static/modelos/calca.glb"
+BONE_3D = "/static/modelos/bone.glb"
 
 # cor de cada peça no 3D
 CORES = {
@@ -37,13 +42,13 @@ def _p(id, nome, preco, cat_id, descricao, modelo_3d=None, estoque=12, foto=None
 
 # fotos do Pexels (IDs nos comentários)
 PRODUTOS = [
-    _p(1, "Camiseta Box Logo", 149.90, 1, "Algodão 240g, modelagem boxy, logo NEXAR bordado no peito.", foto="camiseta-box"),  # 36392069 / 18814063
-    _p(2, "Camiseta Grid", 159.90, 1, "Estampa grid em silk, gola canelada reforçada.", foto="camiseta-grid"),  # 11671964 / 17858294
-    _p(3, "Moletom Heavy", 399.90, 2, "Moletom 480g peluciado, ombro caído, punho largo.", foto="moletom-heavy"),  # 30095407 / 30095401
-    _p(4, "Moletom Drop 01", 429.90, 2, "Edição limitada do primeiro drop. Bordado 3D nas costas.", estoque=3, foto="moletom-drop"),  # 8217312 / 8217415
-    _p(5, "Calça Cargo Tech", 349.90, 3, "Ripstop com seis bolsos e barra ajustável.", foto="calca-cargo"),  # 11716436 / 19220710
-    _p(6, "Calça Wide Denim", 389.90, 3, "Jeans 14oz, corte wide, lavagem escura.", foto="calca-wide"),  # 17720437 / 31703299
-    _p(7, "Boné 6-Panel", 129.90, 4, "Sarja de algodão, aba curva, fecho de metal.", foto="bone"),  # 9558763 / 9558254
+    _p(1, "Camiseta Box Logo", 149.90, 1, "Algodão 240g, modelagem boxy, logo NEXAR bordado no peito.", CAMISETA_3D, foto="camiseta-box"),  # 36392069 / 18814063
+    _p(2, "Camiseta Grid", 159.90, 1, "Estampa grid em silk, gola canelada reforçada.", CAMISETA_3D, foto="camiseta-grid"),  # 11671964 / 17858294
+    _p(3, "Moletom Heavy", 399.90, 2, "Moletom 480g peluciado, ombro caído, punho largo.", MOLETOM_3D, foto="moletom-heavy"),  # 30095407 / 30095401
+    _p(4, "Moletom Drop 01", 429.90, 2, "Edição limitada do primeiro drop. Bordado 3D nas costas.", MOLETOM_3D, estoque=3, foto="moletom-drop"),  # 8217312 / 8217415
+    _p(5, "Calça Cargo Tech", 349.90, 3, "Ripstop com seis bolsos e barra ajustável.", CALCA_3D, foto="calca-cargo"),  # 11716436 / 19220710
+    _p(6, "Calça Wide Denim", 389.90, 3, "Jeans 14oz, corte wide, lavagem escura.", CALCA_3D, foto="calca-wide"),  # 17720437 / 31703299
+    _p(7, "Boné 6-Panel", 129.90, 4, "Sarja de algodão, aba curva, fecho de metal.", BONE_3D, foto="bone"),  # 9558763 / 9558254
     _p(8, "Tênis Runner X", 699.90, 5, "Cabedal em mesh e camurça, solado de borracha.", SAPATO_3D, foto="tenis"),  # 7193623 / 27008322
     _p(9, "Óculos Nexar Shade", 259.90, 5, "Armação acetato, lente com proteção UV400.", OCULOS_3D, foto="oculos"),  # 27353350 / 8217769
 ]
