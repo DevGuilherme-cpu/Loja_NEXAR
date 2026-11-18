@@ -137,7 +137,7 @@ INSERT INTO produtos (id, nome, descricao, preco, estoque, imagem, imagem_2, mod
         'produtos/bone-1.jpg', 'produtos/bone-2.jpg', '', '#F4F4F1', 4),
     -- modelos 3D servidos pelo próprio site (static/modelos), como na migration 0003
     (8, 'Tênis Runner X', 'Cabedal em mesh e camurça, solado de borracha.', 699.90, 12,
-        'produtos/tenis-1.jpg', 'produtos/tenis-2.jpg', '/static/modelos/tenis.glb', '', 5),
+        'produtos/tenis-1.jpg', 'produtos/tenis-2.jpg', '/static/modelos/tenis-nexar.glb', '', 5),
     (9, 'Óculos Nexar Shade', 'Armação acetato, lente com proteção UV400.', 259.90, 12,
         'produtos/oculos-1.jpg', 'produtos/oculos-2.jpg', '/static/modelos/oculos.glb', '', 5);
 
