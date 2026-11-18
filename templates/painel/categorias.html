@@ -1,10 +1,14 @@
 {% extends "painel/base_painel.html" %}
+{% load static %}
 
 {% block titulo %}Categorias — Painel NEXAR{% endblock %}
 
 {% block painel %}
 <div class="painel-topo">
-  <h1>Categorias</h1>
+  <div>
+    <h1>Categorias</h1>
+    <p class="contador">{{ lista|length }} categoria{{ lista|length|pluralize }}</p>
+  </div>
   <form class="busca" method="post" action="{% url 'loja:painel_categoria_nova' %}">
     {% csrf_token %}
     <input type="text" name="nome" placeholder="Nova categoria..." aria-label="Nome da nova categoria" maxlength="50" required>
@@ -12,37 +16,40 @@
   </form>
 </div>
 
-<div class="tabela-wrap">
-  <table class="tabela">
-    <thead>
-      <tr><th>#</th><th>Nome</th><th class="num">Produtos</th><th><span class="sr">Ações</span></th></tr>
-    </thead>
-    <tbody>
-      {% for c in lista %}
-        <tr>
-          <td>{{ c.id }}</td>
-          <td>
-            <form id="cat-{{ c.id }}" method="post" action="{% url 'loja:painel_categoria_editar' c.id %}">
-              {% csrf_token %}
-              <input class="input-tabela" type="text" name="nome" value="{{ c.nome }}" aria-label="Nome da categoria {{ c.nome }}" maxlength="50" required>
-            </form>
-          </td>
-          <td class="num">{{ c.total }}</td>
-          <td>
-            <div class="acoes">
-              <button class="btn-sm" type="submit" form="cat-{{ c.id }}">Salvar</button>
-              <form method="post" action="{% url 'loja:painel_categoria_excluir' c.id %}"
-                    data-msg="Excluir a categoria {{ c.nome }}?" onsubmit="return confirm(this.dataset.msg)">
-                {% csrf_token %}
-                <button class="btn-sm perigo" type="submit" {% if c.total %}disabled title="Tem produtos nesta categoria"{% endif %}>Excluir</button>
-              </form>
-            </div>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="4">Nenhuma categoria cadastrada.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="grade-categorias">
+  {% for c in lista %}
+    <article class="item-categoria">
+      <a class="mosaico mosaico-{{ c.produto_set.all|slice:':4'|length }}" href="{% url 'loja:painel_produtos' %}?categoria={{ c.id }}"
+         aria-label="Ver os produtos de {{ c.nome }}">
+        {% for p in c.produto_set.all|slice:":4" %}
+          {% if p.imagem %}
+            <img src="{{ p.imagem.url }}" alt="" loading="lazy">
+          {% else %}
+            <img data-thumb data-id="{{ p.id }}" data-categoria="{{ c.nome }}" data-modelo="{{ p.modelo_3d|default:'' }}"
+                 data-cor="{{ p.cor }}" data-media="{% get_media_prefix %}" alt="">
+          {% endif %}
+        {% empty %}
+          <span class="mosaico-vazio">Sem produtos ainda</span>
+        {% endfor %}
+        <span class="card-tag">{{ c.total }} produto{{ c.total|pluralize }}</span>
+      </a>
+
+      <form id="cat-{{ c.id }}" class="item-categoria-nome" method="post" action="{% url 'loja:painel_categoria_editar' c.id %}">
+        {% csrf_token %}
+        <input class="input-tabela" type="text" name="nome" value="{{ c.nome }}" aria-label="Nome da categoria {{ c.nome }}" maxlength="50" required>
+      </form>
+
+      <div class="acoes">
+        <button class="btn-sm" type="submit" form="cat-{{ c.id }}">Salvar nome</button>
+        <form method="post" action="{% url 'loja:painel_categoria_excluir' c.id %}"
+              data-msg="Excluir a categoria {{ c.nome }}?" onsubmit="return confirm(this.dataset.msg)">
+          {% csrf_token %}
+          <button class="btn-sm perigo" type="submit" {% if c.total %}disabled title="Tem produtos nesta categoria"{% endif %}>Excluir</button>
+        </form>
+      </div>
+    </article>
+  {% empty %}
+    <p class="vazio">Nenhuma categoria cadastrada.</p>
+  {% endfor %}
 </div>
 {% endblock %}

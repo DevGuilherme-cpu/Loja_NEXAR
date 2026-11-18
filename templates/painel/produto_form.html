@@ -77,7 +77,21 @@
               data-modelo="{{ produto.modelo_3d|default:'' }}"
               aria-label="Prévia 3D do produto"></canvas>
     </div>
-    <small class="contador">Prévia 3D {% if produto %}atual{% else %}(a peça real aparece depois de salvar){% endif %}</small>
+    <small class="contador">Prévia 3D: muda com a categoria, a cor e o modelo .glb escolhidos. Arraste para girar.</small>
+
+    <p class="previa-titulo">Como vai aparecer na loja</p>
+    <div class="previa-card{% if produto.imagem %} tem-foto{% endif %}">
+      <div class="previa-card-img">
+        <img data-previa="foto" alt="" {% if produto.imagem %}src="{{ produto.imagem.url }}"{% else %}hidden{% endif %}>
+        <img data-previa="foto2" alt="" {% if produto.imagem_2 %}src="{{ produto.imagem_2.url }}"{% else %}hidden{% endif %}>
+        <span class="previa-sem-foto">Sem foto: a loja mostra a peça em 3D</span>
+        <span class="card-tag" data-previa="categoria">{{ produto.categoria|default:"Categoria" }}</span>
+      </div>
+      <div class="card-info">
+        <span data-previa="nome">{{ produto.nome|default:"Nome do produto" }}</span>
+        <span data-previa="preco">R$ {{ produto.preco|floatformat:2|default:"0,00" }}</span>
+      </div>
+    </div>
   </aside>
 </form>
 {% endblock %}

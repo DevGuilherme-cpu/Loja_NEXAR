@@ -1,12 +1,17 @@
 {% extends "painel/base_painel.html" %}
+{% load static %}
 
 {% block titulo %}Produtos — Painel NEXAR{% endblock %}
 
 {% block painel %}
 <div class="painel-topo">
-  <h1>Produtos</h1>
+  <div>
+    <h1>Produtos</h1>
+    <p class="contador">{{ produtos|length }} produto{{ produtos|length|pluralize }}{% if busca %} para "{{ busca }}"{% endif %}</p>
+  </div>
   <div class="painel-topo-acoes">
     <form class="busca" method="get" role="search">
+      {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
       <input type="search" name="busca" value="{{ busca }}" placeholder="Buscar produto..." aria-label="Buscar produto">
       <button type="submit">Buscar</button>
     </form>
@@ -14,35 +19,55 @@
   </div>
 </div>
 
-<div class="tabela-wrap">
-  <table class="tabela">
-    <thead>
-      <tr><th>#</th><th>Produto</th><th>Categoria</th><th class="num">Preço</th><th class="num">Estoque</th><th>3D</th><th><span class="sr">Ações</span></th></tr>
-    </thead>
-    <tbody>
-      {% for p in produtos %}
-        <tr>
-          <td>{{ p.id }}</td>
-          <td><a class="link-tabela" href="{% url 'loja:produto' p.id %}">{{ p.nome }}</a></td>
-          <td>{{ p.categoria }}</td>
-          <td class="num">R$ {{ p.preco|floatformat:2 }}</td>
-          <td class="num">{% if p.estoque <= 3 %}<span class="selo">{{ p.estoque }}</span>{% else %}{{ p.estoque }}{% endif %}</td>
-          <td>{% if p.modelo_3d %}Modelo .glb{% else %}Gerado{% endif %}</td>
-          <td>
-            <div class="acoes">
-              <a class="btn-sm" href="{% url 'loja:painel_produto_editar' p.id %}">Editar</a>
-              <form method="post" action="{% url 'loja:painel_produto_excluir' p.id %}"
-                    data-msg="Excluir {{ p.nome }}?" onsubmit="return confirm(this.dataset.msg)">
-                {% csrf_token %}
-                <button class="btn-sm perigo" type="submit">Excluir</button>
-              </form>
-            </div>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7">Nenhum produto encontrado{% if busca %} para "{{ busca }}"{% endif %}.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<nav class="chips filtro-painel" aria-label="Filtrar por categoria">
+  <a class="chip{% if not categoria %} ativo{% endif %}" href="?busca={{ busca|urlencode }}">Todas</a>
+  {% for c in categorias %}
+    <a class="chip{% if categoria == c.id|stringformat:'s' %} ativo{% endif %}" href="?categoria={{ c.id }}&busca={{ busca|urlencode }}">{{ c.nome }}</a>
+  {% endfor %}
+</nav>
+
+<div class="grade-painel">
+  {% for p in produtos %}
+    <article class="card item-produto">
+      <a class="card-img" href="{% url 'loja:painel_produto_editar' p.id %}" aria-label="Editar {{ p.nome }}">
+        {% if p.imagem %}
+          <img src="{{ p.imagem.url }}" alt="" loading="lazy">
+          {% if p.imagem_2 %}<img class="card-img-2" src="{{ p.imagem_2.url }}" alt="" loading="lazy">{% endif %}
+        {% else %}
+          <img data-thumb data-id="{{ p.id }}" data-categoria="{{ p.categoria }}" data-modelo="{{ p.modelo_3d|default:'' }}"
+               data-cor="{{ p.cor }}" data-media="{% get_media_prefix %}" alt="">
+          <img class="card-img-2" alt="">
+        {% endif %}
+        <span class="card-tag">{{ p.categoria }}</span>
+        {% if p.modelo_3d %}<span class="card-tag card-tag-3d">Modelo 3D</span>{% endif %}
+      </a>
+
+      <div class="item-info">
+        <h2>{{ p.nome }}</h2>
+        <p class="item-preco">R$ {{ p.preco|floatformat:2 }}</p>
+        <div class="item-estoque{% if p.estoque <= 3 %} baixo{% endif %}">
+          <span>{% if p.estoque == 0 %}Esgotado{% else %}{{ p.estoque }} em estoque{% endif %}</span>
+          <span class="item-estoque-trilho" aria-hidden="true"><span style="--pct: {% widthratio p.estoque 20 100 %}%"></span></span>
+        </div>
+      </div>
+
+      <div class="acoes">
+        <a class="btn-sm" href="{% url 'loja:painel_produto_editar' p.id %}">Editar</a>
+        <a class="btn-sm" href="{% url 'loja:produto' p.id %}" target="_blank" rel="noopener">Ver na loja</a>
+        <form method="post" action="{% url 'loja:painel_produto_excluir' p.id %}"
+              data-msg="Excluir {{ p.nome }}?" onsubmit="return confirm(this.dataset.msg)">
+          {% csrf_token %}
+          <button class="btn-sm perigo" type="submit">Excluir</button>
+        </form>
+      </div>
+    </article>
+  {% empty %}
+    <p class="vazio">Nenhum produto encontrado{% if busca %} para "{{ busca }}"{% endif %}.</p>
+  {% endfor %}
+
+  <a class="item-novo" href="{% url 'loja:painel_produto_novo' %}">
+    <span aria-hidden="true">+</span>
+    Cadastrar produto
+  </a>
 </div>
 {% endblock %}

@@ -30,7 +30,7 @@ new ResizeObserver(() => {
   camera.updateProjectionMatrix();
 }).observe(canvas);
 
-const peca = await criarModelo({ ...canvas.dataset, seed: Number(canvas.dataset.id) }, 2.6);
+let peca = await criarModelo({ ...canvas.dataset, seed: Number(canvas.dataset.id) }, 2.6);
 cena.add(peca);
 canvas.classList.add('pronto');
 
@@ -79,8 +79,71 @@ form?.addEventListener('submit', e => {
     .to(peca.position, { y: 0.35, duration: 0.4, yoyo: true, repeat: 1, ease: 'power2.out' }, 0);
 });
 
-// cor no painel
-document.querySelector('input[name="cor"]')?.addEventListener('input', e => pintar(peca, e.target.value));
+// formulário do painel: a prévia acompanha o que é escolhido, antes de salvar
+const formPainel = document.querySelector('.form-painel');
+if (formPainel) {
+  const campo = nome => formPainel.elements[nome];
+  const dados = { ...canvas.dataset, seed: Number(canvas.dataset.id) };
+  let arquivoGlb = null;
+  let pedido = 0;
+
+  const corEscolhida = () => (campo('cor_automatica')?.checked ? '' : campo('cor').value);
+
+  // troca a peça do palco (categoria ou .glb novo) com um giro de entrada
+  const trocar = async () => {
+    const meu = ++pedido;
+    const categoria = campo('categoria').selectedOptions[0];
+    const nova = await criarModelo({
+      ...dados,
+      categoria: categoria?.value ? categoria.textContent.trim() : dados.categoria,
+      modelo: arquivoGlb || dados.modelo,
+      cor: corEscolhida() || dados.cor,
+    }, 2.6).catch(() => null);
+    if (!nova || meu !== pedido) return;  // .glb inválido ou já chegou uma escolha mais nova
+    cena.remove(peca);
+    peca = nova;
+    cena.add(peca);
+    if (anima) gsap.from(peca.rotation, { y: -Math.PI, duration: 1, ease: 'expo.out' });
+  };
+
+  campo('categoria').addEventListener('change', trocar);
+  campo('modelo_3d')?.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (arquivoGlb) URL.revokeObjectURL(arquivoGlb);
+    arquivoGlb = f ? URL.createObjectURL(f) : null;
+    trocar();
+  });
+  campo('cor').addEventListener('input', e => {
+    if (campo('cor_automatica')) campo('cor_automatica').checked = false;
+    pintar(peca, e.target.value);
+  });
+  campo('cor_automatica')?.addEventListener('change', trocar);
+
+  // cartão "como vai aparecer na loja"
+  const cartao = document.querySelector('.previa-card');
+  if (cartao) {
+    const nome = cartao.querySelector('[data-previa="nome"]');
+    const preco = cartao.querySelector('[data-previa="preco"]');
+    const cat = cartao.querySelector('[data-previa="categoria"]');
+    const fotos = [cartao.querySelector('[data-previa="foto"]'), cartao.querySelector('[data-previa="foto2"]')];
+    const atualizar = () => {
+      nome.textContent = campo('nome').value.trim() || 'Nome do produto';
+      const v = parseFloat(campo('preco').value);
+      preco.textContent = (Number.isFinite(v) ? v : 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const c = campo('categoria').selectedOptions[0];
+      cat.textContent = c?.value ? c.textContent.trim() : 'Categoria';
+    };
+    ['nome', 'preco', 'categoria'].forEach(n => campo(n).addEventListener('input', atualizar));
+    atualizar();
+    ['imagem', 'imagem_2'].forEach((n, i) => campo(n)?.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      fotos[i].src = URL.createObjectURL(f);
+      fotos[i].hidden = false;
+      cartao.classList.toggle('tem-foto', !fotos[0].hidden);
+    }));
+  }
+}
 
 // personalizar (camiseta e moletom por partes; tênis pelas combinações do .glb)
 const caixa = document.querySelector('.personalizar');

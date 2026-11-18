@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import Count, F, ProtectedError
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -16,7 +17,10 @@ from django.views.decorators.http import require_POST
 
 from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso,
                     uploads_habilitados)
+from .assistente import SUGESTOES, responder
 from .models import Categoria, Pedido, Produto
+from .painel import CD, PERIODOS, entregas, resumo
+from .simulacao import simular_pedidos
 
 # produtos já com a categoria (JOIN)
 PRODUTOS = Produto.objects.select_related("categoria")
@@ -217,9 +221,39 @@ def somente_staff(view):
 
 
 @somente_staff
+def painel_inicio(request):
+    dias = int(request.GET["dias"]) if request.GET.get("dias") in {str(p) for p in PERIODOS} else 30
+    return render(request, "painel/inicio.html",
+                  resumo(dias) | {"dias": dias, "periodos": PERIODOS, "sugestoes": SUGESTOES})
+
+
+@somente_staff
+@require_POST
+def painel_assistente(request):
+    resposta = responder(request.POST.get("pergunta", "")[:300])
+    if request.headers.get("X-Requested-With") == "fetch":
+        return JsonResponse({"resposta": resposta})
+    messages.info(request, resposta)  # sem JavaScript: mostra a resposta como aviso na visão geral
+    return redirect("loja:painel_inicio")
+
+
+@somente_staff
+@require_POST
+def painel_simular(request):
+    criados = simular_pedidos()
+    if criados:
+        messages.success(request, f"{len(criados)} pedidos de exemplo criados. Veja o mapa em Pedidos.")
+    else:
+        messages.error(request, "Todos os produtos estão esgotados: aumente o estoque para simular vendas.")
+    return redirect("loja:painel_inicio")
+
+
+@somente_staff
 def painel_produtos(request):
     busca = request.GET.get("busca", "").strip()
-    return render(request, "painel/produtos.html", {"produtos": filtrar(busca), "busca": busca})
+    categoria = request.GET.get("categoria", "")
+    return render(request, "painel/produtos.html",
+                  {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria})
 
 
 def link_arquivo(arquivo):
@@ -281,7 +315,8 @@ def painel_produto_excluir(request, id):
 
 @somente_staff
 def painel_categorias(request):
-    lista = Categoria.objects.annotate(total=Count("produto"))
+    # prefetch: as fotos dos produtos de cada categoria saem numa consulta só
+    lista = Categoria.objects.annotate(total=Count("produto")).prefetch_related("produto_set")
     return render(request, "painel/categorias.html", {"lista": lista})
 
 
@@ -327,4 +362,5 @@ def painel_categoria_excluir(request, id):
 def painel_pedidos(request):
     # JOIN pedidos + usuário + produto + categoria
     pedidos = Pedido.objects.select_related("usuario", "produto__categoria")
-    return render(request, "painel/pedidos.html", {"pedidos": pedidos})
+    return render(request, "painel/pedidos.html",
+                  {"pedidos": pedidos, "entregas": entregas(pedidos[:12]), "cd": CD})

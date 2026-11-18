@@ -14,7 +14,10 @@ urlpatterns = [
     path("sair/", views.Sair.as_view(), name="sair"),
 
     # painel admin
-    path("painel/", views.painel_produtos, name="painel_produtos"),
+    path("painel/", views.painel_inicio, name="painel_inicio"),
+    path("painel/assistente/", views.painel_assistente, name="painel_assistente"),
+    path("painel/simular/", views.painel_simular, name="painel_simular"),
+    path("painel/produtos/", views.painel_produtos, name="painel_produtos"),
     path("painel/produtos/novo/", views.painel_produto_form, name="painel_produto_novo"),
     path("painel/produtos/<int:id>/editar/", views.painel_produto_form, name="painel_produto_editar"),
     path("painel/produtos/<int:id>/excluir/", views.painel_produto_excluir, name="painel_produto_excluir"),

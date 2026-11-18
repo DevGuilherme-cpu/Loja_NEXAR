@@ -159,8 +159,8 @@ export function encaixar(obj, tamanho = 2.4) {
 const loader = new GLTFLoader();
 // nomes de material que o painel de personalizar reconhece num .glb
 const PARTES_GLB = ['cabedal', 'biqueira', 'calcanhar', 'cadarco', 'entressola', 'sola'];
-// link, /static/... ou arquivo enviado pelo painel (pasta media)
-const caminho = (url, media = '/media/') => (url.startsWith('http') || url.startsWith('/') ? url : media + url);
+// link, /static/..., arquivo escolhido no formulário (blob:) ou enviado pelo painel (pasta media)
+const caminho = (url, media = '/media/') => (/^(https?:|blob:|\/)/.test(url) ? url : media + url);
 
 export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, tamanho) {
   if (modelo) {
