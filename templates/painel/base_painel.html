@@ -1,19 +1,55 @@
-{% extends "base.html" %}
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Painel NEXAR{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <script type="importmap">
+    {"imports": {
+      "three": "{% static 'vendor/three/three.module.min.js' %}",
+      "three/addons/": "{% static 'vendor/three/addons/' %}"
+    }}
+  </script>
+</head>
+<body class="painel-corpo">
+  <a class="pular" href="#conteudo">Pular para o conteúdo</a>
 
-{% block conteudo %}
-{% with rota=request.resolver_match.url_name %}
-<section class="painel">
-  <nav class="painel-menu" aria-label="Painel">
-    <b>Painel</b>
-    <a href="{% url 'loja:painel_produtos' %}" {% if 'produto' in rota %}class="ativo" aria-current="page"{% endif %}>Produtos</a>
-    <a href="{% url 'loja:painel_categorias' %}" {% if 'categoria' in rota %}class="ativo" aria-current="page"{% endif %}>Categorias</a>
-    <a href="{% url 'loja:painel_pedidos' %}" {% if 'pedido' in rota %}class="ativo" aria-current="page"{% endif %}>Pedidos</a>
-    <a href="{% url 'loja:index' %}">Ver a loja</a>
-  </nav>
+  {% with rota=request.resolver_match.url_name %}
+  <div class="painel">
+    <aside class="painel-lateral">
+      <a class="painel-marca" href="{% url 'loja:painel_inicio' %}">NEXAR <span>Painel</span></a>
 
-  <div class="painel-conteudo">
-    {% block painel %}{% endblock %}
+      <nav class="painel-menu" aria-label="Painel">
+        <a href="{% url 'loja:painel_inicio' %}" {% if rota == 'painel_inicio' %}class="ativo" aria-current="page"{% endif %}>Visão geral</a>
+        <a href="{% url 'loja:painel_produtos' %}" {% if 'produto' in rota %}class="ativo" aria-current="page"{% endif %}>Produtos</a>
+        <a href="{% url 'loja:painel_categorias' %}" {% if 'categoria' in rota %}class="ativo" aria-current="page"{% endif %}>Categorias</a>
+        <a href="{% url 'loja:painel_pedidos' %}" {% if 'pedido' in rota %}class="ativo" aria-current="page"{% endif %}>Pedidos</a>
+      </nav>
+
+      <div class="painel-conta">
+        <p>{{ user.get_username }}</p>
+        <a href="{% url 'loja:index' %}" target="_blank" rel="noopener">Ver a loja</a>
+        <form method="post" action="{% url 'loja:sair' %}">{% csrf_token %}<button type="submit">Sair</button></form>
+      </div>
+    </aside>
+
+    <main id="conteudo" class="painel-conteudo">
+      {% if messages %}
+        <div class="painel-avisos" role="status">
+          {% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}
+        </div>
+      {% endif %}
+      {% block painel %}{% endblock %}
+    </main>
   </div>
-</section>
-{% endwith %}
-{% endblock %}
+  {% endwith %}
+
+  <script src="{% static 'vendor/gsap.min.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

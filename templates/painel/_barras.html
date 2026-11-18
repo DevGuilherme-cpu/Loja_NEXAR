@@ -1,0 +1,11 @@
+<ul class="barras">
+  {% for b in itens %}
+    <li>
+      <span class="barras-nome">{{ b.nome }}</span>
+      <span class="barras-valor">{{ b.texto }}</span>
+      <span class="barras-trilho" aria-hidden="true"><span class="barras-barra" style="--pct: {{ b.pct }}%"></span></span>
+    </li>
+  {% empty %}
+    <li class="vazio">Nenhuma venda no período.</li>
+  {% endfor %}
+</ul>

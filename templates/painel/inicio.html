@@ -1,0 +1,129 @@
+{% extends "painel/base_painel.html" %}
+{% load static %}
+
+{% block titulo %}Visão geral — Painel NEXAR{% endblock %}
+
+{% block painel %}
+<div class="painel-topo">
+  <h1>Visão geral</h1>
+  <nav class="periodos" aria-label="Período">
+    {% for p in periodos %}
+      <a href="?dias={{ p }}" {% if p == dias %}aria-current="page"{% endif %}>{{ p }} dias</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<div class="dash">
+  <div class="dash-principal">
+    <section class="kpis" aria-label="Resumo dos últimos {{ dias }} dias">
+      {% for k in kpis %}
+        <article class="cartao kpi">
+          <h2>{{ k.nome }}</h2>
+          <p class="kpi-valor">{{ k.valor }}</p>
+          <p class="kpi-var">
+            {% if k.var is None %}
+              Sem vendas nos {{ dias }} dias anteriores para comparar
+            {% else %}
+              <span class="selo {% if k.var > 0 %}sobe{% elif k.var == 0 %}igual{% endif %}">{% if k.var > 0 %}+{% endif %}{{ k.var }}%</span>
+              em relação aos {{ dias }} dias anteriores
+            {% endif %}
+          </p>
+        </article>
+      {% endfor %}
+    </section>
+
+    <section class="cartao">
+      <div class="cartao-topo">
+        <h2>Vendas por dia</h2>
+        <p>{{ faturamento_periodo }} nos últimos {{ dias }} dias</p>
+      </div>
+      <div class="grafico" id="grafico-dias" role="img"
+           aria-label="Faturamento por dia nos últimos {{ dias }} dias.{% if melhor_dia %} Melhor dia: {{ melhor_dia.data }}, com {{ melhor_dia.texto }}.{% else %} Nenhuma venda no período.{% endif %}"></div>
+      {{ serie|json_script:"dados-dias" }}
+      <table class="sr">
+        <caption>Dias com venda</caption>
+        <thead><tr><th>Dia</th><th>Pedidos</th><th>Faturamento</th></tr></thead>
+        <tbody>
+          {% for d in serie %}{% if d.pedidos %}<tr><td>{{ d.data }}</td><td>{{ d.pedidos }}</td><td>{{ d.texto }}</td></tr>{% endif %}{% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <div class="dash-dupla">
+      <section class="cartao">
+        <h2>Faturamento por categoria</h2>
+        {% include "painel/_barras.html" with itens=categorias %}
+      </section>
+
+      <section class="cartao">
+        <h2>Mais vendidos</h2>
+        {% include "painel/_barras.html" with itens=mais_vendidos %}
+      </section>
+
+      <section class="cartao">
+        <h2>Peças por tamanho</h2>
+        {% include "painel/_barras.html" with itens=tamanhos %}
+      </section>
+
+      <section class="cartao">
+        <div class="cartao-topo">
+          <h2>Estoque baixo</h2>
+          <a class="link" href="{% url 'loja:painel_produtos' %}">Ver produtos</a>
+        </div>
+        <ul class="lista-painel">
+          {% for p in estoque_baixo %}
+            <li>
+              <a href="{% url 'loja:painel_produto_editar' p.id %}">{{ p.nome }}</a>
+              <span class="selo">{% if p.estoque %}{{ p.estoque }} un.{% else %}Esgotado{% endif %}</span>
+            </li>
+          {% empty %}
+            <li class="vazio">Nenhum produto acabando.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+
+    <section class="cartao">
+      <div class="cartao-topo">
+        <h2>Últimos pedidos</h2>
+        <a class="link" href="{% url 'loja:painel_pedidos' %}">Ver todos</a>
+      </div>
+      <ul class="lista-painel">
+        {% for p in ultimos %}
+          <li>
+            <span><b>#{{ p.id }}</b> {{ p.usuario.get_username }}: {{ p.quantidade }}× {{ p.produto.nome }} ({{ p.tamanho }})</span>
+            <span class="lista-valor">R$ {{ p.total|floatformat:2 }}</span>
+          </li>
+        {% empty %}
+          <li class="vazio">Nenhum pedido ainda.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+
+  <aside class="cartao assistente" aria-labelledby="assistente-titulo">
+    <h2 id="assistente-titulo">Assistente</h2>
+    <p class="contador">Responde com os dados da loja, sem internet.</p>
+
+    <ol class="conversa" id="conversa" aria-live="polite">
+      <li class="msg bot">Olá! Pergunte sobre vendas, estoque, categorias ou clientes.</li>
+    </ol>
+
+    <div class="sugestoes">
+      {% for s in sugestoes %}<button type="button" class="chip" data-pergunta="{{ s }}">{{ s }}</button>{% endfor %}
+    </div>
+
+    <form class="assistente-form" id="assistente-form" method="post" action="{% url 'loja:painel_assistente' %}">
+      {% csrf_token %}
+      <label class="sr" for="pergunta">Sua pergunta</label>
+      <input id="pergunta" name="pergunta" maxlength="300" autocomplete="off" required
+             placeholder="Ex.: quanto vendi esta semana?">
+      <button class="btn" type="submit">Perguntar</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/painel.js' %}"></script>
+{% endblock %}

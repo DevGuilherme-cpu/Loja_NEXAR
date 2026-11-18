@@ -143,6 +143,7 @@ class PainelProtegidoTest(TestCase):
 
     def rotas_get(self):
         return [
+            reverse("loja:painel_inicio"),
             reverse("loja:painel_produtos"),
             reverse("loja:painel_produto_novo"),
             reverse("loja:painel_produto_editar", args=[self.prod_id]),
@@ -152,6 +153,7 @@ class PainelProtegidoTest(TestCase):
 
     def rotas_post(self):
         return [
+            reverse("loja:painel_assistente"),
             reverse("loja:painel_produto_novo"),
             reverse("loja:painel_produto_editar", args=[self.prod_id]),
             reverse("loja:painel_produto_excluir", args=[self.prod_id]),
@@ -200,7 +202,7 @@ class MenuTest(TestCase):
         self.assertIn(f'href="{reverse("loja:entrar")}"', html)
         self.assertIn(f'href="{reverse("loja:cadastro")}"', html)
         self.assertNotIn(reverse("loja:sair"), html)
-        self.assertNotIn(f'href="{reverse("loja:painel_produtos")}"', html)
+        self.assertNotIn(f'href="{reverse("loja:painel_inicio")}"', html)
 
     def test_cliente_ve_sair_sem_painel(self):
         self.client.force_login(User.objects.create_user("joana", password=SENHA))
@@ -209,10 +211,10 @@ class MenuTest(TestCase):
         self.assertIn(">Sair</button>", html)
         self.assertIn("joana", html)
         self.assertNotIn(f'href="{reverse("loja:entrar")}"', html)
-        self.assertNotIn(f'href="{reverse("loja:painel_produtos")}"', html)
+        self.assertNotIn(f'href="{reverse("loja:painel_inicio")}"', html)
 
     def test_staff_ve_painel(self):
         self.client.force_login(User.objects.create_user("chefe", password=SENHA, is_staff=True))
         html = self.client.get(reverse("loja:index")).content.decode()
         self.assertIn(">Sair</button>", html)
-        self.assertIn(f'href="{reverse("loja:painel_produtos")}"', html)
+        self.assertIn(f'href="{reverse("loja:painel_inicio")}"', html)

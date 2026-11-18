@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import Count, F, ProtectedError
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -16,7 +17,9 @@ from django.views.decorators.http import require_POST
 
 from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso,
                     uploads_habilitados)
+from .assistente import SUGESTOES, responder
 from .models import Categoria, Pedido, Produto
+from .painel import PERIODOS, resumo
 
 # produtos já com a categoria (JOIN)
 PRODUTOS = Produto.objects.select_related("categoria")
@@ -214,6 +217,23 @@ def somente_staff(view):
             return redirect("loja:index")
         return protegida(request, *args, **kwargs)
     return wrapper
+
+
+@somente_staff
+def painel_inicio(request):
+    dias = int(request.GET["dias"]) if request.GET.get("dias") in {str(p) for p in PERIODOS} else 30
+    return render(request, "painel/inicio.html",
+                  resumo(dias) | {"dias": dias, "periodos": PERIODOS, "sugestoes": SUGESTOES})
+
+
+@somente_staff
+@require_POST
+def painel_assistente(request):
+    resposta = responder(request.POST.get("pergunta", "")[:300])
+    if request.headers.get("X-Requested-With") == "fetch":
+        return JsonResponse({"resposta": resposta})
+    messages.info(request, resposta)  # sem JavaScript: mostra a resposta como aviso na visão geral
+    return redirect("loja:painel_inicio")
 
 
 @somente_staff

@@ -38,7 +38,7 @@
         <label class="sr" for="busca-topo">Buscar peças</label>
         <input id="busca-topo" type="search" name="busca" placeholder="Buscar" value="{{ request.GET.busca|default:'' }}">
       </form>
-      {% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}
+      {% if user.is_staff %}<a href="{% url 'loja:painel_inicio' %}">Painel</a>{% endif %}
       {% if user.is_authenticated %}
         <span class="topo-usuario">Olá, {{ user.username }}</span>
         {# Logout do Django só aceita POST (GET não desloga) #}
@@ -69,7 +69,7 @@
         <h2>Conta</h2>
         {% if user.is_authenticated %}
           <p>{{ user.get_username }}</p>
-          {% if user.is_staff %}<a href="{% url 'loja:painel_produtos' %}">Painel</a>{% endif %}
+          {% if user.is_staff %}<a href="{% url 'loja:painel_inicio' %}">Painel</a>{% endif %}
         {% else %}
           <a href="{% url 'loja:entrar' %}">Entrar</a>
           <a href="{% url 'loja:cadastro' %}">Criar conta</a>
