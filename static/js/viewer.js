@@ -102,6 +102,8 @@ if (caixa && (partes || variantes)) {
   };
   const NOMES = {
     corpo: 'Corpo', mangas: 'Mangas', gola: 'Gola', capuz: 'Capuz', bolso: 'Bolso', estampa: 'Estampa',
+    cabedal: 'Cabedal', biqueira: 'Biqueira', calcanhar: 'Calcanhar', cadarco: 'Cadarço',
+    entressola: 'Entressola', sola: 'Sola',
     midnight: 'Noite', beach: 'Praia', street: 'Rua',
   };
   // posição da câmera e ponto que ela olha, para cada parte
@@ -113,6 +115,13 @@ if (caixa && (partes || variantes)) {
     capuz: [[0, 2.8, 3.4], [0, 0.9, 0]],
     bolso: [[0, -0.5, 3.8], [0, -0.6, 0]],
     estampa: [[0, 0.3, 3.4], [0, 0.25, 0]],
+    // tênis: comprimento no eixo x, ponta para a direita
+    cabedal: [[1.2, 1.2, 4.6], [0, 0.1, 0]],
+    biqueira: [[4, 0.8, 2.4], [0.9, 0, 0]],
+    calcanhar: [[-4, 1, 2.4], [-0.9, 0.1, 0]],
+    cadarco: [[0.8, 3.6, 2.2], [0.2, 0.3, 0]],
+    entressola: [[0.5, -0.2, 4.4], [0, -0.25, 0]],
+    sola: [[0.5, -3.4, 3], [0, -0.4, 0]],
   };
 
   const original = {};
@@ -122,9 +131,9 @@ if (caixa && (partes || variantes)) {
       if (nome !== 'estampa') original[nome] = '#' + meshes[0].material.color.getHexString();
     }
   }
-  let parteAtual = partes ? 'corpo' : null;
+  let parteAtual = partes ? Object.keys(partes)[0] : null;
   let varianteAtual = variantes?.padrao ?? '';
-  let estampaCor = partes && partes.corpo[0].material.color.getHSL({}).l > 0.5 ? '#151515' : '#f2f2ef';
+  let estampaCor = partes?.corpo?.[0].material.color.getHSL({}).l > 0.5 ? '#151515' : '#f2f2ef';
   const estampaMesh = partes?.estampa?.[0];
 
   const opcoes = partes ? Object.keys(partes) : variantes.nomes;
@@ -134,7 +143,7 @@ if (caixa && (partes || variantes)) {
     b.className = 'chip';
     b.dataset.valor = valor;
     b.textContent = NOMES[valor] ?? valor;
-    b.setAttribute('aria-pressed', String(valor === (partes ? 'corpo' : variantes.padrao)));
+    b.setAttribute('aria-pressed', String(valor === (partes ? parteAtual : variantes.padrao)));
     listaPartes.append(b);
   }
   if (partes) {
@@ -195,7 +204,7 @@ if (caixa && (partes || variantes)) {
   const pintarParte = (nome, hex) => {
     const alvo = new THREE.Color(hex);
     partes[nome].forEach(m => {
-      const brilho = () => m.material.sheenColor.copy(m.material.color).lerp(branco, 0.5);
+      const brilho = () => m.material.sheenColor?.copy(m.material.color).lerp(branco, 0.5);
       if (!anima) { m.material.color.copy(alvo); brilho(); return; }
       gsap.to(m.material.color, { r: alvo.r, g: alvo.g, b: alvo.b, duration: 0.5, ease: 'power2.out', onUpdate: brilho });
     });
