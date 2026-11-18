@@ -1,3 +1,4 @@
+import uuid
 from functools import wraps
 
 from django.conf import settings
@@ -7,8 +8,9 @@ from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import DatabaseError, IntegrityError, transaction
-from django.db.models import Count, ProtectedError
+from django.db.models import Count, F, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -36,8 +38,104 @@ def produtos(request):
                   {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria})
 
 
+QTD_MAX_POR_PEDIDO = 10
+SESSAO_TOKENS = "pedido_tokens"
+
+
+def novo_token_pedido(request):
+    """Token de uso único por formulário: evita gravar o mesmo pedido duas vezes (F5 / clique duplo)."""
+    token = uuid.uuid4().hex
+    tokens = request.session.get(SESSAO_TOKENS, [])[-19:]  # guarda no máximo 20 formulários abertos
+    request.session[SESSAO_TOKENS] = tokens + [token]
+    return token
+
+
+def consumir_token_pedido(request, token):
+    tokens = request.session.get(SESSAO_TOKENS, [])
+    if not token or token not in tokens:
+        return False
+    tokens.remove(token)
+    request.session[SESSAO_TOKENS] = tokens
+    return True
+
+
+def devolver_token_pedido(request, token):
+    """Compra recusada depois de consumir o token (sem estoque): o mesmo formulário pode ser reenviado."""
+    tokens = request.session.get(SESSAO_TOKENS, [])
+    if token not in tokens:
+        request.session[SESSAO_TOKENS] = (tokens + [token])[-20:]
+
+
+def inteiro_ascii(texto):
+    """Só 0-9: str.isdigit() aceita "²" e "١", que fariam int() falhar ou aceitar dígitos estranhos."""
+    # len <= 9: o Python recusa int() de textos com mais de 4300 dígitos (seria erro 500)
+    return texto.isascii() and texto.isdigit() and len(texto) <= 9
+
+
 def produto(request, id):
-    return render(request, "produto.html", {"produto": get_object_or_404(PRODUTOS, id=id)})
+    contexto = {"produto": get_object_or_404(PRODUTOS, id=id)}
+    if request.user.is_authenticated:
+        contexto["token_pedido"] = novo_token_pedido(request)
+    return render(request, "produto.html", contexto)
+
+
+@require_POST
+def pedido(request):
+    """Compra de um produto: grava o pedido e baixa o estoque na mesma transação.
+
+    Tudo é validado no servidor (o HTML pode ser alterado). O preço vem do banco e fica gravado
+    em preco_unitario. A baixa de estoque é um UPDATE condicional (WHERE estoque >= quantidade):
+    duas compras simultâneas da última peça não passam as duas, em SQLite, PostgreSQL e MySQL.
+    """
+    produto_id = request.POST.get("produto_id", "")
+    if not inteiro_ascii(produto_id):
+        messages.error(request, "Produto inválido.")
+        return redirect("loja:produtos")
+    produto = get_object_or_404(Produto, id=int(produto_id))
+    volta = redirect("loja:produto", id=produto.id)
+
+    if not request.user.is_authenticated:
+        messages.info(request, "Entre na sua conta para comprar.")
+        return redirect(f"{reverse('loja:entrar')}?next={reverse('loja:produto', args=[produto.id])}")
+
+    # O campo "personalizacao" do formulário é ignorado de propósito: Pedido não tem coluna para ele
+    # (a personalização 3D é só visual). Campos extras como "preco" também são ignorados.
+    tamanho = request.POST.get("tamanho", "")
+    quantidade = request.POST.get("quantidade", "").strip()
+    if tamanho not in dict(Pedido.TAMANHOS):
+        messages.error(request, "Escolha um tamanho válido.")
+        return volta
+    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
+        messages.error(request, f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}.")
+        return volta
+    quantidade = int(quantidade)
+
+    # depois das validações: um formulário inválido pode ser corrigido e reenviado com o mesmo token
+    token = request.POST.get("token_pedido")
+    if not consumir_token_pedido(request, token):
+        messages.warning(request, "Este pedido já foi enviado ou a página expirou. Confira em Pedidos antes de comprar de novo.")
+        return volta
+
+    with transaction.atomic():
+        baixou = Produto.objects.filter(id=produto.id, estoque__gte=quantidade).update(
+            estoque=F("estoque") - quantidade)
+        if not baixou:
+            # first(): o produto pode ter sido excluído entre o get_object_or_404 e o UPDATE
+            estoque = Produto.objects.filter(id=produto.id).values_list("estoque", flat=True).first()
+            if estoque is None:
+                messages.error(request, "Este produto não está mais disponível.")
+                return redirect("loja:produtos")
+            devolver_token_pedido(request, token)  # pode corrigir a quantidade e reenviar
+            messages.error(request, "Produto esgotado." if estoque == 0 else
+                           f"Só restam {estoque} unidade(s) de “{produto.nome}”.")
+            return volta
+        # mesma transação do UPDATE: a linha já está bloqueada, o preço lido é o atual
+        preco = Produto.objects.filter(id=produto.id).values_list("preco", flat=True).get()
+        novo = Pedido.objects.create(usuario=request.user, produto=produto, tamanho=tamanho,
+                                     quantidade=quantidade, preco_unitario=preco)
+    total = f"{novo.total:.2f}".replace(".", ",")
+    messages.success(request, f"Pedido #{novo.id} confirmado: {quantidade}× {produto.nome} ({tamanho}) — R$ {total}.")
+    return volta
 
 
 # ---------- conta (login / cadastro / sair) ----------
