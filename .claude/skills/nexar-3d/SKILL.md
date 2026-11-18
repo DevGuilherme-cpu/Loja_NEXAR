@@ -34,7 +34,11 @@ Para adicionar um tipo novo de peça: contorno 2D em `pecas.js` (metade direita,
 - Camiseta e moletom são montados em **partes** (`peca.userData.partes`): `corpo`, `mangas`,
   `gola` ou `capuz`, `bolso`, `estampa`. Cada parte tem material próprio, por isso dá para pintar
   separado. A estampa é um texto desenhado num canvas e colado na frente (`userData.desenhar`).
-- `.glb` com `KHR_materials_variants` (o tênis) vira `peca.userData.variantes`
+- `.glb` com materiais chamados `cabedal`, `biqueira`, `calcanhar`, `cadarco`, `entressola`, `sola`
+  vira peça por partes automaticamente (`PARTES_GLB` em `pecas.js`). O tênis próprio
+  (`static/modelos/tenis-nexar.glb`) foi gerado no Meshy e separado com
+  `blender -b --python ferramentas/separar_tenis.py -- entrada.glb saida.glb [render.png]`.
+- `.glb` com `KHR_materials_variants` vira `peca.userData.variantes`
   (`nomes`, `padrao`, `parser`); `aplicarVariante(peca, nome)` troca a combinação.
 - O painel (`.personalizar` em `produto.html`) só aparece quando a peça tem partes ou variantes.
   `VISTAS` em `viewer.js` define onde a câmera para em cada parte (afasta 1.6x no celular).

@@ -157,6 +157,8 @@ export function encaixar(obj, tamanho = 2.4) {
 }
 
 const loader = new GLTFLoader();
+// nomes de material que o painel de personalizar reconhece num .glb
+const PARTES_GLB = ['cabedal', 'biqueira', 'calcanhar', 'cadarco', 'entressola', 'sola'];
 // link, /static/... ou arquivo enviado pelo painel (pasta media)
 const caminho = (url, media = '/media/') => (url.startsWith('http') || url.startsWith('/') ? url : media + url);
 
@@ -165,6 +167,14 @@ export async function criarModelo({ categoria, modelo, cor, media, seed = 0 }, t
     try {
       const gltf = await loader.loadAsync(caminho(modelo, media));
       const peca = encaixar(gltf.scene, tamanho);
+      // .glb separado em partes nomeadas (sola, cabedal...) pode ser personalizado como a camiseta
+      const achadas = {};
+      gltf.scene.traverse(m => {
+        const nome = (m.isMesh && m.material?.name) || '';
+        if (PARTES_GLB.includes(nome)) (achadas[nome] ??= []).push(m);
+      });
+      const partes = Object.fromEntries(PARTES_GLB.filter(n => achadas[n]).map(n => [n, achadas[n]]));
+      if (Object.keys(partes).length > 1) peca.userData.partes = partes;
       // combinações de cor que vêm dentro do .glb (KHR_materials_variants)
       const variantes = gltf.parser.json.extensions?.KHR_materials_variants?.variants;
       if (variantes) {
