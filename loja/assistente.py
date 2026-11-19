@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from .models import Pedido, Produto
-from .painel import ESTOQUE_BAIXO, inicio_do_dia, pedidos_entre, reais, totais, valor
+from .painel import ESTOQUE_BAIXO, inicio_do_dia, itens_entre, reais, totais, valor
 
 SUGESTOES = [
     "Quanto vendi esta semana?",
@@ -56,12 +56,12 @@ def responder(pergunta):
         return "Olá! " + AJUDA
 
     inicio, fim, quando = periodo(t)
-    pedidos = pedidos_entre(inicio, fim)
+    itens = itens_entre(inicio, fim)  # peças vendidas; o pedido de cada uma em item.pedido
 
     # produto citado pelo nome: "como está o moletom heavy?"
     for produto in Produto.objects.all():
         if normalizar(produto.nome) in t:
-            dele = [p for p in pedidos if p.produto_id == produto.id]
+            dele = [i for i in itens if i.produto_id == produto.id]
             soma = totais(dele)
             return (f"{produto.nome}: {plural(soma['pecas'], 'peça')} vendida{'' if soma['pecas'] == 1 else 's'} "
                     f"{quando} ({reais(soma['faturamento'])}). Estoque atual: {produto.estoque}.")
@@ -74,54 +74,55 @@ def responder(pergunta):
         return f"Precisam de reposição ({ESTOQUE_BAIXO} unidades ou menos):\n" + "\n".join(linhas)
 
     if re.search(r"menos vend|parad|encalh|sem venda|nao vend", t):
-        vendidos = {p.produto_id for p in pedidos}
+        vendidos = {i.produto_id for i in itens}
         parados = [p.nome for p in Produto.objects.order_by("nome") if p.id not in vendidos]
         if not parados:
             return f"Todos os produtos tiveram venda {quando}."
         return f"Sem nenhuma venda {quando}: " + ", ".join(parados) + "."
 
-    if not pedidos:
+    if not itens:
         return f"Não houve pedidos {quando}, então ainda não tenho números para mostrar."
 
     # categoria e tamanho antes de "mais vendido": "tamanho mais vendido" é pergunta de tamanho
     if "categori" in t:
         soma = defaultdict(Decimal)
-        for p in pedidos:
-            soma[p.produto.categoria.nome] += valor(p)
+        for i in itens:
+            soma[i.produto.categoria.nome] += valor(i)
         ordem = sorted(soma.items(), key=lambda i: i[1], reverse=True)
         linhas = [f"• {nome}: {reais(v)}" for nome, v in ordem]
         return f"A categoria que mais vende {quando} é {ordem[0][0]}.\n" + "\n".join(linhas)
 
     if "tamanh" in t:
         contagem = Counter()
-        for p in pedidos:
-            contagem[p.tamanho] += p.quantidade
+        for i in itens:
+            contagem[i.tamanho] += i.quantidade
         linhas = [f"• {rotulo}: {plural(contagem[nome], 'peça')}" for nome, rotulo in Pedido.TAMANHOS if contagem[nome]]
         return f"O tamanho mais pedido {quando} é {contagem.most_common(1)[0][0]}.\n" + "\n".join(linhas)
 
     if re.search(r"mais vend|top|campe|melhor|sucesso|ranking", t):
         contagem = Counter()
-        for p in pedidos:
-            contagem[p.produto.nome] += p.quantidade
+        for i in itens:
+            contagem[i.produto.nome] += i.quantidade
         linhas = [f"{i}. {nome}: {plural(n, 'peça')}" for i, (nome, n) in enumerate(contagem.most_common(3), 1)]
         return f"Mais vendidos {quando}:\n" + "\n".join(linhas)
 
-    soma = totais(pedidos)
+    soma = totais(itens)
     if re.search(r"ticket|media|medio", t):
         return f"O ticket médio {quando} é {reais(soma['ticket'])} ({plural(soma['pedidos'], 'pedido')})."
 
     if re.search(r"client|comprador|quem compr", t):
         por_cliente = defaultdict(Decimal)
-        for p in pedidos:
-            por_cliente[p.cliente] += valor(p)
+        for i in itens:
+            por_cliente[i.pedido.cliente] += valor(i)
         nome, v = max(por_cliente.items(), key=lambda i: i[1])
         return (f"O cliente que mais comprou {quando} foi {nome}, com {reais(v)}. "
                 f"Clientes com pedido {quando}: {len(por_cliente)}.")
 
     if "pedido" in t:
-        ultimo = max(pedidos, key=lambda p: p.data)
+        ultimo = max((i.pedido for i in itens), key=lambda p: (p.data, p.id))
+        pecas = ", ".join(f"{i.quantidade}× {i.produto.nome}" for i in itens if i.pedido_id == ultimo.id)
         return (f"Foram {plural(soma['pedidos'], 'pedido')} {quando}. O último foi o #{ultimo.id}, "
-                f"de {ultimo.cliente}: {ultimo.quantidade}× {ultimo.produto.nome}.")
+                f"de {ultimo.cliente}: {pecas}.")
 
     if re.search(r"fatur|vend|receit|ganh|dinheiro|quanto|lucr", t):
         return (f"Você faturou {reais(soma['faturamento'])} {quando}, em {plural(soma['pedidos'], 'pedido')} "

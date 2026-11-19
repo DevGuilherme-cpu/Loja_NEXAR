@@ -147,23 +147,33 @@ class AdminPedidoTest(TestCase):
         cat = Categoria.objects.create(nome="Teste Email")
         self.produto = Produto.objects.create(nome="Peça", preco="49.90", categoria=cat)
 
+    @staticmethod
+    def itens(*linhas, iniciais=0):
+        """Dados do formulário de itens (inline) do admin do pedido."""
+        dados = {"itens-TOTAL_FORMS": len(linhas), "itens-INITIAL_FORMS": iniciais,
+                 "itens-MIN_NUM_FORMS": 0, "itens-MAX_NUM_FORMS": 1000}
+        for n, linha in enumerate(linhas):
+            dados |= {f"itens-{n}-{campo}": valor for campo, valor in linha.items()}
+        return dados
+
     def test_criacao_sem_preco_usa_preco_do_produto(self):
-        r = self.client.post(reverse("admin:loja_pedido_add"), {
-            "usuario": self.admin.pk, "produto": self.produto.pk, "tamanho": "M",
-            "quantidade": 2, "preco_unitario": ""})
+        r = self.client.post(reverse("admin:loja_pedido_add"), {"usuario": self.admin.pk} | self.itens(
+            {"produto": self.produto.pk, "tamanho": "M", "quantidade": 2, "preco_unitario": ""}))
         self.assertEqual(r.status_code, 302)
-        self.assertEqual(Pedido.objects.get().preco_unitario, Decimal("49.90"))
+        self.assertEqual(Pedido.objects.get().itens.get().preco_unitario, Decimal("49.90"))
 
     def test_edicao_preco_readonly(self):
-        pedido = Pedido.objects.create(usuario=self.admin, produto=self.produto, tamanho="M")
+        pedido = Pedido.com_item(self.produto, "M", usuario=self.admin)
+        item = pedido.itens.get()
         url = reverse("admin:loja_pedido_change", args=[pedido.pk])
-        self.assertNotIn("preco_unitario", self.client.get(url).context["adminform"].form.fields)
-        r = self.client.post(url, {"usuario": self.admin.pk, "produto": self.produto.pk,
-                                   "tamanho": "G", "quantidade": 3, "preco_unitario": "1.00"})
+        formset = self.client.get(url).context["inline_admin_formsets"][0].formset
+        self.assertNotIn("preco_unitario", formset.forms[0].fields)
+        r = self.client.post(url, {"usuario": self.admin.pk} | self.itens(
+            {"id": item.pk, "pedido": pedido.pk, "produto": self.produto.pk, "tamanho": "G", "quantidade": 3,
+             "preco_unitario": "1.00"}, iniciais=1))
         self.assertEqual(r.status_code, 302)
-        pedido.refresh_from_db()
-        self.assertEqual(pedido.preco_unitario, Decimal("49.90"))
-        self.assertEqual(pedido.quantidade, 3)
+        item.refresh_from_db()
+        self.assertEqual((item.preco_unitario, item.quantidade), (Decimal("49.90"), 3))
 
 
 class MigrationEmailUnicoTest(TransactionTestCase):

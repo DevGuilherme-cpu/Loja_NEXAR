@@ -44,7 +44,7 @@ class TamanhosTest(TestCase):
         self.client.post(reverse("loja:pedido"), dados | {"tamanho": "M"})
         self.assertFalse(Pedido.objects.exists())
         self.client.post(reverse("loja:pedido"), dados | {"tamanho": "41"})
-        self.assertEqual(Pedido.objects.get().tamanho, "41")
+        self.assertEqual(Pedido.objects.get().itens.get().tamanho, "41")
 
 
 class EncerrarContaTest(TestCase):
@@ -74,8 +74,7 @@ class EncerrarContaTest(TestCase):
     def test_com_pedidos_anonimiza_e_mantem_o_pedido(self):
         cat = Categoria.objects.create(nome="Camisetas")
         produto = Produto.objects.create(nome="Camiseta", preco="100.00", categoria=cat)
-        pedido = Pedido.objects.create(usuario=self.usuario, produto=produto, tamanho="M",
-                                       preco_unitario=Decimal("100.00"))
+        pedido = Pedido.com_item(produto, "M", 1, Decimal("100.00"), usuario=self.usuario)
         self.encerrar()
         u = User.objects.get(pk=self.usuario.pk)
         self.assertEqual((u.username, u.email, u.is_active, u.has_usable_password()),

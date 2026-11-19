@@ -4405,3 +4405,324 @@ html.a11y-links a {
     flex-shrink: 0;
   }
 }
+
+/* sacola: ícone no topo (templates/base.html) */
+.topo-sacola {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -.4rem 0;
+  border-radius: 50%;
+  transition: color var(--dur-media) var(--ease);
+}
+
+.topo-acoes .topo-sacola::after {
+  display: none;
+}
+
+.topo-sacola:hover {
+  color: var(--neon);
+}
+
+.topo-sacola svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.topo-sacola-qtd {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 .3rem;
+  border-radius: 999px;
+  background: var(--neon);
+  color: var(--tinta);
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.topo-sacola-qtd[hidden] {
+  display: none;
+}
+
+/* receita "notification badge" do transitions.dev: o número pula quando muda */
+.topo-sacola-qtd.pulou {
+  animation: pular-badge .45s var(--ease);
+}
+
+@keyframes pular-badge {
+  40% {
+    transform: scale(1.5);
+  }
+}
+
+/* bolinha que voa do botão até a sacola (js/sacola.js) */
+.sacola-voo {
+  position: fixed;
+  z-index: 400;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--neon);
+  box-shadow: 0 0 0 2px var(--tinta);
+  pointer-events: none;
+}
+
+/* aviso embaixo da tela (receita "toast" do transitions.dev: sobe 16 px saindo do desfoque) */
+.toast {
+  position: fixed;
+  z-index: 250;
+  left: 50%;
+  bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  padding: .7rem .7rem .7rem 1.25rem;
+  border-radius: 999px;
+  background: var(--tinta);
+  color: var(--papel);
+  font-weight: 600;
+  translate: -50% 16px;
+  opacity: 0;
+  filter: blur(3px);
+  visibility: hidden;
+  transition: opacity var(--dur-rapida) var(--ease), translate var(--dur-rapida) var(--ease),
+    filter var(--dur-rapida) var(--ease), visibility 0s linear var(--dur-rapida);
+}
+
+.toast.aberto {
+  translate: -50% 0;
+  opacity: 1;
+  filter: blur(0);
+  visibility: visible;
+  transition-duration: var(--dur-media), var(--dur-media), var(--dur-media), 0s;
+  transition-delay: 0s;
+}
+
+.toast p {
+  margin: 0;
+}
+
+.toast .btn-sm {
+  flex-shrink: 0;
+  background: var(--neon);
+  color: var(--tinta);
+}
+
+.toast .btn-sm:hover {
+  background: var(--papel);
+}
+
+.toast-erro {
+  background: var(--eixo-x);
+}
+
+/* botões da página do produto */
+.pdp-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+
+.pdp-botoes .btn {
+  flex: 1 1 12rem;
+}
+
+.loja .btn-contorno {
+  background: var(--papel);
+  color: var(--tinta);
+  box-shadow: inset 0 0 0 2px var(--tinta);
+}
+
+.loja .btn-contorno:hover {
+  background: var(--neon);
+}
+
+/* página da sacola */
+.sacola-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.sacola-item {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "img info preco"
+    "img qtd tirar";
+  align-items: center;
+  gap: .5rem 1rem;
+  padding: 1rem;
+  border: 2px solid var(--tinta);
+  border-radius: var(--r);
+  animation: chegar .35s var(--ease) backwards;
+}
+
+.sacola-img {
+  grid-area: img;
+  align-self: stretch;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--r-pequeno);
+  background: var(--palco);
+}
+
+.sacola-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sacola-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  color: var(--nevoa);
+  font-size: .9rem;
+}
+
+.sacola-info b {
+  color: var(--tinta);
+  font-size: var(--t1);
+  font-stretch: 75%;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sacola-alerta {
+  color: var(--eixo-x);
+  font-weight: 700;
+}
+
+.sacola-preco {
+  grid-area: preco;
+  align-self: start;
+  margin: 0;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sacola-qtd {
+  grid-area: qtd;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  border-radius: 999px;
+  background: var(--palco);
+}
+
+.sacola-qtd button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-media) var(--ease);
+}
+
+.sacola-qtd button:hover:not(:disabled) {
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.sacola-qtd button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.sacola-qtd>span {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sacola-tirar {
+  grid-area: tirar;
+  justify-self: end;
+}
+
+.sacola-tirar button {
+  padding: .6rem 0;
+  border: 0;
+  background: none;
+  color: var(--eixo-x);
+  cursor: pointer;
+}
+
+.sacola-vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 2rem;
+  border: 2px dashed var(--tinta);
+  border-radius: var(--r);
+}
+
+/* barra do frete grátis no resumo */
+.frete-meta p {
+  margin: 0 0 .5rem;
+  color: var(--palco-escuro);
+}
+
+.frete-meta b {
+  color: var(--neon);
+}
+
+.frete-meta-barra {
+  display: block;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .18);
+  overflow: hidden;
+}
+
+.frete-meta-barra span {
+  display: block;
+  width: var(--pct);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--neon);
+  transform-origin: left;
+  animation: encher .7s var(--ease) backwards;
+}
+
+.resumo>.link {
+  align-self: flex-start;
+  color: var(--neon);
+}
+
+@media (max-width: 600px) {
+  .sacola-item {
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-areas:
+      "img info"
+      "img preco"
+      "qtd tirar";
+  }
+}

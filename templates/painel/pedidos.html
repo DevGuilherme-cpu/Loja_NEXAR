@@ -50,7 +50,7 @@
 <div class="tabela-wrap">
   <table class="tabela">
     <thead>
-      <tr><th>#</th><th>Data</th><th>Cliente</th><th>Produto</th><th>Categoria</th><th>Tam.</th><th class="num">Qtd.</th><th class="num">Total</th></tr>
+      <tr><th>#</th><th>Data</th><th>Cliente</th><th>Peças</th><th class="num">Qtd.</th><th class="num">Total</th></tr>
     </thead>
     <tbody>
       {% for p in pedidos %}
@@ -58,14 +58,12 @@
           <td>{{ p.id }}</td>
           <td>{{ p.data|date:"d/m/Y H:i" }}</td>
           <td>{{ p.cliente }}</td>
-          <td>{{ p.produto }}</td>
-          <td>{{ p.produto.categoria }}</td>
-          <td>{{ p.tamanho }}</td>
+          <td>{% for i in p.itens.all %}{{ i.quantidade }}× {{ i.produto }} ({{ i.tamanho }}, {{ i.produto.categoria }}){% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
           <td class="num">{{ p.quantidade }}</td>
           <td class="num">R$ {{ p.total|floatformat:2 }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="8">Nenhum pedido ainda.</td></tr>
+        <tr><td colspan="6">Nenhum pedido ainda.</td></tr>
       {% endfor %}
     </tbody>
   </table>

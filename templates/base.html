@@ -49,6 +49,11 @@
       {% else %}
         <a href="{% url 'loja:entrar' %}">Entrar</a>
       {% endif %}
+      <a class="topo-sacola" href="{% url 'loja:sacola' %}" data-sacola
+         aria-label="Sacola, {{ sacola_pecas }} peça{{ sacola_pecas|pluralize }}">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 8h14l-1.2 13H6.2zM9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+        <span class="topo-sacola-qtd" data-sacola-qtd{% if not sacola_pecas %} hidden{% endif %}>{{ sacola_pecas }}</span>
+      </a>
     </div>
   </header>
 

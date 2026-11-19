@@ -9,7 +9,7 @@
     <span class="drop-selo">Checkout seguro</span>
     <h1 class="drop-titulo">Falta pouco.</h1>
     <ol class="passos">
-      <li class="feito">Peça escolhida</li>
+      <li class="feito">Sacola</li>
       <li class="atual" aria-current="step">Entrega e pagamento</li>
       <li>Pedido confirmado</li>
     </ol>
@@ -23,10 +23,8 @@
         data-subtotal="{{ subtotal|stringformat:'.2f' }}" data-frete-padrao="{{ frete_padrao|stringformat:'.2f' }}"
         data-frete-expresso="{{ frete_expresso|stringformat:'.2f' }}">
     {% csrf_token %}
+    {# as peças vêm da sacola (sessão), não do formulário #}
     <input type="hidden" name="checkout" value="1">
-    <input type="hidden" name="produto_id" value="{{ produto.id }}">
-    <input type="hidden" name="tamanho" value="{{ tamanho }}">
-    <input type="hidden" name="quantidade" value="{{ quantidade }}">
     <input type="hidden" name="token_pedido" value="{{ token_pedido }}">
 
     <div class="checkout-campos">
@@ -112,16 +110,18 @@
 
     <aside class="resumo" aria-labelledby="resumo-titulo">
       <h2 id="resumo-titulo">Seu pedido</h2>
-      <div class="resumo-item">
-        <div class="resumo-img">
-          {% if produto.imagem %}<img src="{{ produto.imagem.url }}" alt="">{% endif %}
+      {% for l in linhas %}
+        <div class="resumo-item">
+          <div class="resumo-img">
+            {% if l.produto.imagem %}<img src="{{ l.produto.imagem.url }}" alt="">{% endif %}
+          </div>
+          <div>
+            <b>{{ l.produto.nome }}</b>
+            <span>Tamanho {% if l.tamanho == "U" %}único{% else %}{{ l.tamanho }}{% endif %}, {{ l.quantidade }} unidade{{ l.quantidade|pluralize }}</span>
+          </div>
         </div>
-        <div>
-          <b>{{ produto.nome }}</b>
-          <span>Tamanho {% if tamanho == "U" %}único{% else %}{{ tamanho }}{% endif %}, {{ quantidade }} unidade{{ quantidade|pluralize }}</span>
-          <a class="link" href="{% url 'loja:produto' produto.id %}">Trocar</a>
-        </div>
-      </div>
+      {% endfor %}
+      <a class="link" href="{% url 'loja:sacola' %}">Editar sacola</a>
       <dl class="resumo-contas">
         <div><dt>Subtotal</dt><dd>R$ {{ subtotal|floatformat:2 }}</dd></div>
         <div><dt>Frete</dt><dd data-frete>{% if frete_padrao %}R$ {{ frete_padrao|floatformat:2 }}{% else %}Grátis{% endif %}</dd></div>

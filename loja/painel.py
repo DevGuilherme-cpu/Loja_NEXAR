@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .models import Pedido, Produto
+from .models import ItemPedido, Pedido, Produto
 
 PERIODOS = (7, 30, 90)
 ESTOQUE_BAIXO = 5
@@ -24,24 +24,25 @@ def inicio_do_dia(dia):
     return timezone.make_aware(datetime.combine(dia, time.min))
 
 
-def pedidos_entre(inicio=None, fim=None):
-    # shortcut: traz os pedidos do período para a memória; com milhares de pedidos, trocar por aggregate no banco
-    qs = Pedido.objects.select_related("usuario", "produto__categoria")
+def itens_entre(inicio=None, fim=None):
+    """Peças vendidas no período (cada uma com o pedido dela: data e cliente em item.pedido)."""
+    # shortcut: traz as peças do período para a memória; com milhares de pedidos, trocar por aggregate no banco
+    qs = ItemPedido.objects.select_related("pedido__usuario", "produto__categoria")
     if inicio:
-        qs = qs.filter(data__gte=inicio)
+        qs = qs.filter(pedido__data__gte=inicio)
     if fim:
-        qs = qs.filter(data__lt=fim)
+        qs = qs.filter(pedido__data__lt=fim)
     return list(qs)
 
 
-def valor(pedido):
-    return (pedido.preco_unitario or Decimal(0)) * pedido.quantidade
+def valor(item):
+    return item.total
 
 
-def totais(pedidos):
-    faturamento = sum((valor(p) for p in pedidos), Decimal(0))
-    n = len(pedidos)
-    return {"faturamento": faturamento, "pedidos": n, "pecas": sum(p.quantidade for p in pedidos),
+def totais(itens):
+    faturamento = sum((valor(i) for i in itens), Decimal(0))
+    n = len({i.pedido_id for i in itens})
+    return {"faturamento": faturamento, "pedidos": n, "pecas": sum(i.quantidade for i in itens),
             "ticket": faturamento / n if n else Decimal(0)}
 
 
@@ -86,18 +87,20 @@ def entregas(pedidos):
             # pedido do checkout: o ponto do mapa é a capital do estado; o nome é a cidade de verdade
             _, uf, lon, lat = por_uf[p.entrega_uf]
             cidade = p.entrega_cidade
+        itens = list(p.itens.all())
+        primeiro = f"{itens[0].quantidade}× {itens[0].produto.nome}" if itens else "Sem peças"
         lista.append({"id": p.id, "cliente": p.cliente,
-                      "produto": f"{p.quantidade}× {p.produto.nome}", "total": reais(valor(p)),
-                      "cidade": cidade, "uf": uf, "lon": lon, "lat": lat})
+                      "produto": primeiro + (f" + {len(itens) - 1} peça(s)" if len(itens) > 1 else ""),
+                      "total": reais(p.total), "cidade": cidade, "uf": uf, "lon": lon, "lat": lat})
     return lista
 
 
 def resumo(dias=30):
     hoje = timezone.localdate()
     inicio = inicio_do_dia(hoje - timedelta(days=dias - 1))
-    atuais = pedidos_entre(inicio)
+    atuais = itens_entre(inicio)
     t = totais(atuais)
-    ant = totais(pedidos_entre(inicio - timedelta(days=dias), inicio))
+    ant = totais(itens_entre(inicio - timedelta(days=dias), inicio))
 
     kpis = [
         {"nome": "Faturamento", "valor": reais(t["faturamento"]), "var": variacao(t["faturamento"], ant["faturamento"])},
@@ -106,19 +109,19 @@ def resumo(dias=30):
         {"nome": "Peças vendidas", "valor": t["pecas"], "var": variacao(t["pecas"], ant["pecas"])},
     ]
 
-    por_dia, pedidos_dia = defaultdict(Decimal), Counter()
+    por_dia, pedidos_dia = defaultdict(Decimal), defaultdict(set)
     categorias, produtos, tamanhos = defaultdict(Decimal), Counter(), Counter()
-    for p in atuais:
-        dia = timezone.localdate(p.data)
-        por_dia[dia] += valor(p)
-        pedidos_dia[dia] += 1
-        categorias[p.produto.categoria.nome] += valor(p)
-        produtos[p.produto.nome] += p.quantidade
-        tamanhos[p.tamanho] += p.quantidade
+    for i in atuais:
+        dia = timezone.localdate(i.pedido.data)
+        por_dia[dia] += valor(i)
+        pedidos_dia[dia].add(i.pedido_id)
+        categorias[i.produto.categoria.nome] += valor(i)
+        produtos[i.produto.nome] += i.quantidade
+        tamanhos[i.tamanho] += i.quantidade
 
     dias_lista = [hoje - timedelta(days=i) for i in range(dias - 1, -1, -1)]
     serie = [{"data": d.strftime("%d/%m"), "valor": float(por_dia[d]), "texto": reais(por_dia[d]),
-              "pedidos": pedidos_dia[d]} for d in dias_lista]
+              "pedidos": len(pedidos_dia[d])} for d in dias_lista]
     melhor = max(serie, key=lambda s: s["valor"])
 
     def pecas(n):
@@ -136,5 +139,5 @@ def resumo(dias=30):
                       "pct": round(tamanhos[nome] / (max(tamanhos.values(), default=0) or 1) * 100)}
                      for nome, rotulo in Pedido.TAMANHOS if tamanhos[nome]],
         "estoque_baixo": Produto.objects.filter(estoque__lte=ESTOQUE_BAIXO).order_by("estoque", "nome")[:6],
-        "ultimos": Pedido.objects.select_related("usuario", "produto")[:5],
+        "ultimos": Pedido.objects.select_related("usuario").prefetch_related("itens__produto")[:5],
     }

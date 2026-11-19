@@ -153,7 +153,7 @@ class ProdutoCrudTest(CrudBase):
         self.assertContains(r, "Produto “Avulso” excluído.")
 
     def test_excluir_com_pedido_bloqueia(self):
-        Pedido.objects.create(usuario=self.cliente, produto=self.prod, tamanho="M", quantidade=1)
+        Pedido.com_item(self.prod, "M", 1, usuario=self.cliente)
         r = self.client.post(reverse("loja:painel_produto_excluir", args=[self.prod.id]), follow=True)
         self.assertTrue(Produto.objects.filter(id=self.prod.id).exists())
         self.assertContains(r, "tem 1 pedido(s) e não pode ser excluído")
@@ -166,12 +166,12 @@ class ProdutoCrudTest(CrudBase):
                                           self.dados()).status_code, 404)
 
     def test_mudar_preco_nao_altera_pedido_existente(self):
-        pedido = Pedido.objects.create(usuario=self.cliente, produto=self.prod, tamanho="G", quantidade=2)
-        self.assertEqual(pedido.preco_unitario, Decimal("199.90"))
+        pedido = Pedido.com_item(self.prod, "G", 2, usuario=self.cliente)
+        self.assertEqual(pedido.itens.get().preco_unitario, Decimal("199.90"))
         self.client.post(reverse("loja:painel_produto_editar", args=[self.prod.id]), self.dados(preco="10.00"))
         self.assertEqual(Produto.objects.get(id=self.prod.id).preco, Decimal("10.00"))
-        pedido.refresh_from_db()
-        self.assertEqual(pedido.preco_unitario, Decimal("199.90"))
+        pedido = Pedido.objects.get(pk=pedido.pk)
+        self.assertEqual(pedido.itens.get().preco_unitario, Decimal("199.90"))
         self.assertEqual(pedido.total, Decimal("399.80"))
 
 

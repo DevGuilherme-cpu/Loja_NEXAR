@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal
 from functools import wraps
 
 from django.conf import settings
@@ -21,7 +22,7 @@ from django.views.decorators.http import require_POST
 from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, FRETE_GRATIS_ACIMA, CadastroForm, CategoriaForm, EntregaForm,
                     ProdutoForm, calcular_frete, email_em_uso, uploads_habilitados)
 from .assistente import SUGESTOES, responder
-from .models import Categoria, Pedido, Produto
+from .models import Categoria, ItemPedido, Pedido, Produto
 from .painel import CD, PERIODOS, entregas, resumo  # entregas/CD também desenham o rastreio do cliente
 from .simulacao import simular_pedidos
 
@@ -97,58 +98,165 @@ def produto(request, id):
     return render(request, "produto.html", contexto)
 
 
-SESSAO_CHECKOUT = "checkout"
 SESSAO_ANIMAR = "animar_pedido"  # id do pedido recém-criado: a animação da caixa toca uma vez só
 
+# Sacola: fica na sessão, como [{"produto_id": 3, "tamanho": "M", "quantidade": 2}, ...].
+# Serve para visitante e para quem tem conta, e continua depois do login (a sessão é a mesma).
+# Preço e estoque não ficam guardados: são lidos do banco a cada página e conferidos de novo ao gravar.
+SESSAO_SACOLA = "sacola"
+MAX_LINHAS_SACOLA = 20
 
-def contexto_checkout(request, produto, tamanho, quantidade, form, token=None):
-    subtotal = produto.preco * quantidade
-    return {"produto": produto, "tamanho": tamanho, "quantidade": quantidade, "form": form,
-            "token_pedido": token or novo_token_pedido(request), "subtotal": subtotal,
-            "frete_padrao": calcular_frete(subtotal, "padrao"), "frete_expresso": calcular_frete(subtotal, "expresso"),
-            "falta_frete_gratis": FRETE_GRATIS_ACIMA - subtotal}
+
+def erro_da_escolha(produto, tamanho, quantidade):
+    """Mensagem de erro do tamanho/quantidade escolhidos, ou None se estiver tudo certo."""
+    if tamanho not in produto.tamanhos:  # tênis só aceita 38 a 44, boné só "U"...
+        return "Escolha um tamanho válido."
+    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
+        return f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}."
+    return None
+
+
+def ler_escolha(dados):
+    """Produto, tamanho e quantidade de um formulário da loja.
+
+    Devolve (produto, tamanho, quantidade, erro). erro é None quando está tudo certo; produto pode
+    vir preenchido mesmo com erro (para voltar à página dele).
+    """
+    produto_id, tamanho = dados.get("produto_id", ""), dados.get("tamanho", "")
+    quantidade = dados.get("quantidade", "").strip()
+    produto = PRODUTOS.filter(id=int(produto_id)).first() if inteiro_ascii(produto_id) else None
+    if produto is None:
+        return None, tamanho, 0, "Produto inválido."
+    erro = erro_da_escolha(produto, tamanho, quantidade)
+    return produto, tamanho, 0 if erro else int(quantidade), erro
+
+
+def itens_da_sacola(request):
+    """[(produto, tamanho, quantidade)] da sessão. Peça que saiu do catálogo some da sacola."""
+    linhas = request.session.get(SESSAO_SACOLA, [])
+    produtos = PRODUTOS.in_bulk([linha["produto_id"] for linha in linhas])
+    return [(produtos[linha["produto_id"]], linha["tamanho"], linha["quantidade"]) for linha in linhas
+            if linha["produto_id"] in produtos and linha["tamanho"] in produtos[linha["produto_id"]].tamanhos]
+
+
+def guardar_sacola(request, itens):
+    request.session[SESSAO_SACOLA] = [{"produto_id": p.id, "tamanho": t, "quantidade": q} for p, t, q in itens]
+
+
+def por_na_sacola(request, produto, tamanho, quantidade):
+    """Soma com a mesma peça e tamanho, se já estiver lá. Devolve a mensagem de erro, ou None."""
+    itens = itens_da_sacola(request)
+    for i, (p, t, q) in enumerate(itens):
+        if p.id == produto.id and t == tamanho:
+            itens[i] = (p, t, min(q + quantidade, QTD_MAX_POR_PEDIDO))
+            break
+    else:
+        if len(itens) >= MAX_LINHAS_SACOLA:
+            return f"A sacola aceita até {MAX_LINHAS_SACOLA} peças diferentes. Finalize esta compra primeiro."
+        itens.append((produto, tamanho, quantidade))
+    guardar_sacola(request, itens)
+    return None
+
+
+def contexto_sacola(itens):
+    linhas = [{"produto": p, "tamanho": t, "quantidade": q, "total": p.preco * q, "chave": f"{p.id}-{t}"}
+              for p, t, q in itens]
+    subtotal = sum((linha["total"] for linha in linhas), Decimal(0))
+    return {"linhas": linhas, "subtotal": subtotal, "pecas": sum(q for _, _, q in itens),
+            "falta_frete_gratis": FRETE_GRATIS_ACIMA - subtotal,
+            "frete_gratis_pct": min(100, round(subtotal / FRETE_GRATIS_ACIMA * 100))}
+
+
+def sacola(request):
+    itens = itens_da_sacola(request)
+    if len(itens) != len(request.session.get(SESSAO_SACOLA, [])):
+        guardar_sacola(request, itens)  # tira da sessão o que saiu do catálogo
+    return render(request, "sacola.html", contexto_sacola(itens))
+
+
+@require_POST
+def sacola_adicionar(request):
+    """Botão "Adicionar à sacola". Com JavaScript responde em JSON (a página não recarrega)."""
+    produto, tamanho, quantidade, erro = ler_escolha(request.POST)
+    erro = erro or por_na_sacola(request, produto, tamanho, quantidade)
+    via_js = request.headers.get("X-Requested-With") == "fetch"
+    if erro:
+        if via_js:
+            return JsonResponse({"ok": False, "mensagem": erro}, status=400)
+        messages.error(request, erro)
+        return redirect("loja:produto", id=produto.id) if produto else redirect("loja:produtos")
+    mensagem = f"{produto.nome} ({tamanho}) está na sacola."
+    if via_js:
+        pecas = sum(q for _, _, q in itens_da_sacola(request))
+        return JsonResponse({"ok": True, "mensagem": mensagem, "pecas": pecas})
+    messages.success(request, mensagem)
+    return redirect("loja:produto", id=produto.id)
+
+
+@require_POST
+def sacola_atualizar(request):
+    """Muda a quantidade de uma peça da sacola (linha = "produto-tamanho"); 0 tira a peça."""
+    itens = itens_da_sacola(request)
+    linha, quantidade = request.POST.get("linha", ""), request.POST.get("quantidade", "").strip()
+    for i, (p, t, _) in enumerate(itens):
+        if f"{p.id}-{t}" == linha and inteiro_ascii(quantidade):
+            if int(quantidade):
+                itens[i] = (p, t, min(int(quantidade), QTD_MAX_POR_PEDIDO))
+            else:
+                del itens[i]
+                messages.info(request, f"{p.nome} ({t}) saiu da sacola.")
+            guardar_sacola(request, itens)
+            break
+    return redirect("loja:sacola")
+
+
+def contexto_checkout(request, itens, form, token=None):
+    contexto = contexto_sacola(itens)
+    subtotal = contexto["subtotal"]
+    return contexto | {"form": form, "token_pedido": token or novo_token_pedido(request),
+                       "frete_padrao": calcular_frete(subtotal, "padrao"),
+                       "frete_expresso": calcular_frete(subtotal, "expresso")}
 
 
 def checkout(request):
-    """O botão Comprar traz para cá: entrega, frete e pagamento (simulado) antes de gravar o pedido.
+    """Entrega, frete e pagamento (simulado) das peças da sacola, antes de gravar o pedido.
 
-    POST (da página do produto): guarda a escolha na sessão e redireciona, para o F5 não reenviar.
+    POST (botão Comprar da página do produto): põe a peça na sacola e redireciona, para o F5 não reenviar.
     GET: mostra o formulário. Não precisa de conta: quem não entrou compra como visitante (pede
-    e-mail) ou clica em "Entrar" e volta para cá sem perder a escolha (a sessão continua no login).
+    e-mail) ou clica em "Entrar" e volta para cá sem perder a sacola (a sessão continua no login).
     O pedido é gravado pela view pedido(), com as mesmas validações e a mesma baixa de estoque.
     """
     if request.method == "POST":
-        request.session[SESSAO_CHECKOUT] = {k: request.POST.get(k, "") for k in ("produto_id", "tamanho", "quantidade")}
+        produto, tamanho, quantidade, erro = ler_escolha(request.POST)
+        erro = erro or por_na_sacola(request, produto, tamanho, quantidade)
+        if erro:
+            messages.error(request, erro)
+            return redirect("loja:produto", id=produto.id) if produto else redirect("loja:produtos")
         return redirect("loja:checkout")
 
-    escolha = request.session.get(SESSAO_CHECKOUT) or {}
-    produto_id, tamanho, quantidade = (escolha.get(k, "") for k in ("produto_id", "tamanho", "quantidade"))
-    produto = Produto.objects.select_related("categoria").filter(id=int(produto_id)).first() \
-        if inteiro_ascii(produto_id) else None
-    if produto is None:
-        messages.info(request, "Escolha uma peça para comprar.")
+    itens = itens_da_sacola(request)
+    if not itens:
+        messages.info(request, "Sua sacola está vazia. Escolha uma peça para comprar.")
         return redirect("loja:produtos")
-    if tamanho not in produto.tamanhos:
-        messages.error(request, "Escolha um tamanho válido.")
-        return redirect("loja:produto", id=produto.id)
-    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
-        messages.error(request, f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}.")
-        return redirect("loja:produto", id=produto.id)
     visitante = not request.user.is_authenticated
     nome = "" if visitante else request.user.get_full_name()
     form = EntregaForm(initial={"nome": nome, "envio": "padrao", "pagamento": "pix"}, visitante=visitante)
-    return render(request, "checkout.html", contexto_checkout(request, produto, tamanho, int(quantidade), form))
+    return render(request, "checkout.html", contexto_checkout(request, itens, form))
+
+
+# pedido com as peças, os produtos e as categorias (3 consultas, em vez de uma por peça)
+PEDIDOS = Pedido.objects.select_related("usuario").prefetch_related("itens__produto__categoria")
 
 
 @login_required
 def pedido_confirmado(request, id):
-    pedido = get_object_or_404(Pedido.objects.select_related("produto__categoria"), id=id, usuario=request.user)
+    pedido = get_object_or_404(PEDIDOS, id=id, usuario=request.user)
     return pagina_do_pedido(request, pedido)
 
 
 def pedido_acompanhar(request, codigo):
     """Pedido aberto pelo link secreto (compra sem conta). Só quem tem o link vê: o código tem 128 bits."""
-    pedido = get_object_or_404(Pedido.objects.select_related("produto__categoria"), codigo=codigo)
+    pedido = get_object_or_404(PEDIDOS, codigo=codigo)
     return pagina_do_pedido(request, pedido, link=request.build_absolute_uri())
 
 
@@ -166,45 +274,57 @@ def pagina_do_pedido(request, pedido, link=None):
     })
 
 
+class SemEstoque(Exception):
+    """Uma das peças acabou no meio da compra: desfaz a transação inteira (nenhum estoque baixa)."""
+
+    def __init__(self, produto):
+        super().__init__(produto.nome)
+        self.produto = produto
+
+
 @require_POST
 def pedido(request):
-    """Compra de um produto: grava o pedido e baixa o estoque na mesma transação.
+    """Grava o pedido e baixa o estoque de todas as peças na mesma transação.
 
+    Pelo checkout (checkout=1): as peças vêm da sacola, com entrega e pagamento. Sem o checkout
+    (compra direta de uma peça, para quem tem conta): a peça vem do formulário.
     Tudo é validado no servidor (o HTML pode ser alterado). O preço vem do banco e fica gravado
     em preco_unitario. A baixa de estoque é um UPDATE condicional (WHERE estoque >= quantidade):
     duas compras simultâneas da última peça não passam as duas, em SQLite, PostgreSQL e MySQL.
     """
-    produto_id = request.POST.get("produto_id", "")
-    if not inteiro_ascii(produto_id):
-        messages.error(request, "Produto inválido.")
-        return redirect("loja:produtos")
-    produto = get_object_or_404(Produto, id=int(produto_id))
-    volta = redirect("loja:produto", id=produto.id)
-
-    # compra direta (sem o checkout) continua exigindo conta; pelo checkout dá para comprar sem conta
     visitante = not request.user.is_authenticated
-    if visitante and not request.POST.get("checkout"):
-        messages.info(request, "Entre na sua conta para comprar.")
-        return redirect(f"{reverse('loja:entrar')}?next={reverse('loja:produto', args=[produto.id])}")
-
-    # O campo "personalizacao" do formulário é ignorado de propósito: Pedido não tem coluna para ele
-    # (a personalização 3D é só visual). Campos extras como "preco" também são ignorados.
-    tamanho = request.POST.get("tamanho", "")
-    quantidade = request.POST.get("quantidade", "").strip()
-    if tamanho not in produto.tamanhos:  # tênis só aceita 38 a 44, boné só "U"...
-        messages.error(request, "Escolha um tamanho válido.")
-        return volta
-    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
-        messages.error(request, f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}.")
-        return volta
-    quantidade = int(quantidade)
+    pelo_checkout = bool(request.POST.get("checkout"))
+    if pelo_checkout:
+        itens = itens_da_sacola(request)
+        if not itens:
+            messages.info(request, "Sua sacola está vazia. Escolha uma peça para comprar.")
+            return redirect("loja:produtos")
+        volta = redirect("loja:sacola")
+    else:
+        produto_id = request.POST.get("produto_id", "")
+        if not inteiro_ascii(produto_id):
+            messages.error(request, "Produto inválido.")
+            return redirect("loja:produtos")
+        produto = get_object_or_404(Produto, id=int(produto_id))
+        # compra direta (sem o checkout) continua exigindo conta; pelo checkout dá para comprar sem conta
+        if visitante:
+            messages.info(request, "Entre na sua conta para comprar.")
+            return redirect(f"{reverse('loja:entrar')}?next={reverse('loja:produto', args=[produto.id])}")
+        # O campo "personalizacao" do formulário é ignorado de propósito: o pedido não tem coluna para ele
+        # (a personalização 3D é só visual). Campos extras como "preco" também são ignorados.
+        tamanho, quantidade = request.POST.get("tamanho", ""), request.POST.get("quantidade", "").strip()
+        volta = redirect("loja:produto", id=produto.id)
+        if erro := erro_da_escolha(produto, tamanho, quantidade):
+            messages.error(request, erro)
+            return volta
+        itens = [(produto, tamanho, int(quantidade))]
 
     # vindo do checkout: entrega e pagamento são obrigatórios; com erro, a página volta com os avisos
     # (antes de consumir o token, para a pessoa corrigir e enviar de novo)
-    entrega = EntregaForm(request.POST, visitante=visitante) if request.POST.get("checkout") else None
+    entrega = EntregaForm(request.POST, visitante=visitante) if pelo_checkout else None
     if entrega and not entrega.is_valid():
         return render(request, "checkout.html",
-                      contexto_checkout(request, produto, tamanho, quantidade, entrega, request.POST.get("token_pedido")))
+                      contexto_checkout(request, itens, entrega, request.POST.get("token_pedido")))
 
     # depois das validações: um formulário inválido pode ser corrigido e reenviado com o mesmo token
     token = request.POST.get("token_pedido")
@@ -212,33 +332,45 @@ def pedido(request):
         messages.warning(request, "Este pedido já foi enviado ou a página expirou. Confira em Pedidos antes de comprar de novo.")
         return volta
 
-    with transaction.atomic():
-        baixou = Produto.objects.filter(id=produto.id, estoque__gte=quantidade).update(
-            estoque=F("estoque") - quantidade)
-        if not baixou:
-            # first(): o produto pode ter sido excluído entre o get_object_or_404 e o UPDATE
-            estoque = Produto.objects.filter(id=produto.id).values_list("estoque", flat=True).first()
-            if estoque is None:
-                messages.error(request, "Este produto não está mais disponível.")
-                return redirect("loja:produtos")
-            devolver_token_pedido(request, token)  # pode corrigir a quantidade e reenviar
+    try:
+        with transaction.atomic():
+            # sempre na ordem do id: duas compras com as mesmas peças não ficam uma esperando a outra
+            for produto, _, qtd in sorted(itens, key=lambda i: i[0].id):
+                if not Produto.objects.filter(id=produto.id, estoque__gte=qtd).update(estoque=F("estoque") - qtd):
+                    raise SemEstoque(produto)
+            # mesma transação do UPDATE: as linhas já estão bloqueadas, o preço lido é o atual
+            precos = dict(Produto.objects.filter(id__in={p.id for p, _, _ in itens}).values_list("id", "preco"))
+            subtotal = sum(precos[p.id] * q for p, _, q in itens)
+            dados = entrega.dados_do_pedido(subtotal) if entrega else {}
+            if entrega and not visitante and not dados["entrega_email"]:
+                dados["entrega_email"] = request.user.email
+            novo = Pedido.objects.create(usuario=None if visitante else request.user, **dados)
+            ItemPedido.objects.bulk_create([ItemPedido(pedido=novo, produto=p, tamanho=t, quantidade=q,
+                                                       preco_unitario=precos[p.id]) for p, t, q in itens])
+    except SemEstoque as falta:
+        # first(): o produto pode ter sido excluído entre a leitura e o UPDATE
+        estoque = Produto.objects.filter(id=falta.produto.id).values_list("estoque", flat=True).first()
+        if estoque is None:
+            messages.error(request, "Este produto não está mais disponível.")
+            return redirect("loja:produtos")
+        devolver_token_pedido(request, token)  # pode corrigir a quantidade e reenviar
+        nome = falta.produto.nome
+        if pelo_checkout:
+            messages.error(request, f"“{nome}” esgotou. Tire da sacola para continuar." if estoque == 0 else
+                           f"Só restam {estoque} unidade(s) de “{nome}”. Ajuste a quantidade na sacola.")
+        else:
             messages.error(request, "Produto esgotado." if estoque == 0 else
-                           f"Só restam {estoque} unidade(s) de “{produto.nome}”.")
-            return volta
-        # mesma transação do UPDATE: a linha já está bloqueada, o preço lido é o atual
-        preco = Produto.objects.filter(id=produto.id).values_list("preco", flat=True).get()
-        dados = entrega.dados_do_pedido(preco * quantidade) if entrega else {}
-        if entrega and not visitante and not dados["entrega_email"]:
-            dados["entrega_email"] = request.user.email
-        novo = Pedido.objects.create(usuario=None if visitante else request.user, produto=produto, tamanho=tamanho,
-                                     quantidade=quantidade, preco_unitario=preco, **dados)
-    if entrega:
-        request.session.pop(SESSAO_CHECKOUT, None)
+                           f"Só restam {estoque} unidade(s) de “{nome}”.")
+        return volta
+
+    if pelo_checkout:
+        request.session.pop(SESSAO_SACOLA, None)
         request.session[SESSAO_ANIMAR] = novo.id
         if visitante:
             return redirect("loja:pedido_acompanhar", codigo=novo.codigo)
         return redirect("loja:pedido_confirmado", id=novo.id)
-    total = f"{novo.total:.2f}".replace(".", ",")
+    produto, tamanho, quantidade = itens[0]
+    total = f"{precos[produto.id] * quantidade:.2f}".replace(".", ",")
     messages.success(request, f"Pedido #{novo.id} confirmado: {quantidade}× {produto.nome} ({tamanho}) — R$ {total}.")
     return volta
 
@@ -305,8 +437,7 @@ def cadastro(request):
 
 @login_required
 def conta(request):
-    pedidos = Pedido.objects.filter(usuario=request.user).select_related("produto")
-    return render(request, "conta.html", {"pedidos": pedidos})
+    return render(request, "conta.html", {"pedidos": PEDIDOS.filter(usuario=request.user)})
 
 
 @login_required
@@ -441,8 +572,8 @@ def painel_produto_excluir(request, id):
     produto = get_object_or_404(Produto, id=id)
     try:
         produto.delete()  # DELETE; arquivos de mídia ficam no disco
-    except ProtectedError:  # Pedido.produto é PROTECT
-        total = produto.pedido_set.count()
+    except ProtectedError:  # ItemPedido.produto é PROTECT
+        total = Pedido.objects.filter(itens__produto=produto).distinct().count()
         messages.error(request, f"O produto “{produto.nome}” tem {total} pedido(s) e não pode ser excluído. "
                                 "Para tirá-lo de venda, zere o estoque.")
     else:
@@ -497,7 +628,7 @@ def painel_categoria_excluir(request, id):
 
 @somente_staff
 def painel_pedidos(request):
-    # JOIN pedidos + usuário + produto + categoria
-    pedidos = Pedido.objects.select_related("usuario", "produto__categoria")
+    # JOIN pedidos + usuário; itens, produtos e categorias em mais 3 consultas
     return render(request, "painel/pedidos.html",
-                  {"pedidos": pedidos, "entregas": entregas(pedidos[:12]), "cd": CD})
+                  # .all(): cópia nova a cada acesso (o PEDIDOS do módulo não guarda resultado entre requisições)
+                  {"pedidos": PEDIDOS.all(), "entregas": entregas(PEDIDOS[:12]), "cd": CD})
