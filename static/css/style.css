@@ -1623,6 +1623,49 @@ html.a11y-links a {
   line-height: 1.7;
 }
 
+/* compra sem conta: aviso no checkout e link do pedido */
+.visitante-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--r);
+  background: var(--neon);
+  color: var(--tinta);
+}
+
+.visitante-aviso p {
+  flex: 1 1 18rem;
+}
+
+.visitante-aviso .btn-sm {
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.visitante-aviso .btn-sm:hover {
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.link-pedido-linha {
+  display: flex;
+  gap: .5rem;
+  width: 100%;
+}
+
+.link-pedido-linha input {
+  flex: 1;
+  min-width: 0;
+  padding: .5rem .75rem;
+  border: 0;
+  border-radius: var(--r-pequeno);
+  background: var(--papel);
+  font-size: .85rem;
+}
+
 /* rastreio da entrega (página do pedido) */
 .rastreio-status {
   margin-bottom: 1rem;

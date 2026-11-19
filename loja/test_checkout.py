@@ -35,13 +35,54 @@ class CheckoutTest(TestCase):
         self.assertFalse(cpf_valido("52998224724"))
         self.assertFalse(cpf_valido("11111111111"))
 
-    def test_visitante_vai_para_login_e_volta_com_a_escolha(self):
+    def test_visitante_vai_ao_checkout_sem_login(self):
         r = self.escolher()
-        self.assertRedirects(r, f"{reverse('loja:entrar')}?next={reverse('loja:checkout')}", fetch_redirect_response=False)
+        self.assertRedirects(r, reverse("loja:checkout"), fetch_redirect_response=False)
+        r = self.client.get(reverse("loja:checkout"))
+        self.assertContains(r, "Camiseta Grid")
+        self.assertContains(r, "Comprando sem conta")
+        self.assertContains(r, 'name="email"')
+        # se preferir entrar, a escolha continua na sessão depois do login
         self.client.force_login(self.usuario)
         r = self.client.get(reverse("loja:checkout"))
         self.assertContains(r, "Camiseta Grid")
-        self.assertContains(r, 'name="token_pedido"')
+        self.assertNotContains(r, "Comprando sem conta")
+
+    def test_visitante_precisa_de_email(self):
+        self.escolher()
+        r = self.entrega(email="")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Este campo é obrigatório")
+        self.assertFalse(Pedido.objects.exists())
+
+    def test_compra_sem_conta_e_link_secreto(self):
+        self.escolher()
+        r = self.entrega(email="Bia@Exemplo.com")
+        pedido = Pedido.objects.get()
+        self.assertIsNone(pedido.usuario)
+        self.assertEqual(pedido.entrega_email, "bia@exemplo.com")
+        self.assertGreaterEqual(len(pedido.codigo), 20)
+        link = reverse("loja:pedido_acompanhar", args=[pedido.codigo])
+        self.assertRedirects(r, link, fetch_redirect_response=False)
+        self.assertEqual(Produto.objects.get(pk=self.produto.pk).estoque, 4)
+        # o link abre sem login; código errado ou o número do pedido não abrem
+        pagina = self.client.get(link)
+        self.assertContains(pagina, "Guarde este link")
+        self.assertContains(pagina, "Acompanhe a entrega")
+        self.assertEqual(self.client.get(reverse("loja:pedido_acompanhar", args=["codigo-errado"])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("loja:pedido_confirmado", args=[pedido.id])).status_code, 302)
+
+    def test_compra_direta_sem_checkout_ainda_exige_conta(self):
+        r = self.client.post(reverse("loja:pedido"), {"produto_id": self.produto.id, "tamanho": "M", "quantidade": "1"})
+        self.assertTrue(r.url.startswith(reverse("loja:entrar")))
+        self.assertFalse(Pedido.objects.exists())
+
+    def test_painel_mostra_pedido_de_visitante(self):
+        self.escolher()
+        self.entrega(email="bia@exemplo.com")
+        self.client.force_login(User.objects.create_user("chefe", password="senha-teste-123", is_staff=True))
+        for url in (reverse("loja:painel_pedidos"), reverse("loja:painel_inicio")):
+            self.assertContains(self.client.get(url), "Bia Souza (visitante)")
 
     def test_comprar_na_pagina_do_produto_vai_ao_checkout_sem_gravar(self):
         self.client.force_login(self.usuario)

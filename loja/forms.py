@@ -86,7 +86,7 @@ class AdminEditarUsuarioForm(EmailUnicoMixin, UserChangeForm):
         model = User
 
 
-# ---------- painel: produtos e categorias ----------
+# painel: produtos e categorias
 # Uploads vão para MEDIA_ROOT (media/produtos/ e media/modelos/). Arquivos antigos não são
 # apagados do disco ao substituir/excluir (pode haver outro produto usando o mesmo caminho).
 IMAGEM_MAX_MB = 5
@@ -188,7 +188,7 @@ class CategoriaForm(forms.ModelForm):
         return nome
 
 
-# ---------- checkout (entrega e pagamento simulado) ----------
+# checkout (entrega e pagamento simulado)
 
 FRETE_GRATIS_ACIMA = Decimal("300")
 FRETES = {"padrao": Decimal("19.90"), "expresso": Decimal("34.90")}
@@ -220,6 +220,8 @@ def cpf_valido(cpf):
 
 class EntregaForm(forms.Form):
     nome = forms.CharField(label="Nome completo", max_length=100)
+    # obrigatório só para quem compra sem conta (é por ele que a pessoa recebe o link do pedido)
+    email = forms.EmailField(label="E-mail", max_length=254, required=False)
     cpf = forms.CharField(label="CPF", max_length=14)
     telefone = forms.CharField(label="Celular", max_length=16)
     cep = forms.CharField(label="CEP", max_length=9)
@@ -231,6 +233,13 @@ class EntregaForm(forms.Form):
     uf = forms.ChoiceField(label="Estado", choices=[(uf, uf) for uf in UFS])
     envio = forms.ChoiceField(label="Entrega", choices=[("padrao", "Padrão"), ("expresso", "Expresso")])
     pagamento = forms.ChoiceField(label="Pagamento", choices=[("pix", "Pix"), ("cartao", "Cartão"), ("boleto", "Boleto")])
+
+    def __init__(self, *args, visitante=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["email"].required = visitante
+
+    def clean_email(self):
+        return normalizar_email(self.cleaned_data["email"])
 
     def clean_nome(self):
         nome = " ".join(self.cleaned_data["nome"].split())
@@ -263,6 +272,7 @@ class EntregaForm(forms.Form):
         tel = d["telefone"]
         return {
             "entrega_nome": d["nome"],
+            "entrega_email": d["email"],
             "entrega_cpf": f"***.***.***-{d['cpf'][-2:]}",
             "entrega_telefone": f"({tel[:2]}) {tel[2:-4]}-{tel[-4:]}",
             "entrega_cep": f"{d['cep'][:5]}-{d['cep'][5:]}",

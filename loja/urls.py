@@ -11,6 +11,7 @@ urlpatterns = [
     path("pedido/", views.pedido, name="pedido"),
     path("checkout/", views.checkout, name="checkout"),
     path("pedido/<int:id>/", views.pedido_confirmado, name="pedido_confirmado"),
+    path("pedido/acompanhar/<str:codigo>/", views.pedido_acompanhar, name="pedido_acompanhar"),
     path("entrar/", views.Entrar.as_view(), name="entrar"),
     path("cadastro/", views.cadastro, name="cadastro"),
     path("sair/", views.Sair.as_view(), name="sair"),

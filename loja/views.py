@@ -112,18 +112,13 @@ def checkout(request):
     """O botão Comprar traz para cá: entrega, frete e pagamento (simulado) antes de gravar o pedido.
 
     POST (da página do produto): guarda a escolha na sessão e redireciona, para o F5 não reenviar.
-    GET: mostra o formulário. Quem não entrou vai para o login e volta para cá sem perder a escolha.
+    GET: mostra o formulário. Não precisa de conta: quem não entrou compra como visitante (pede
+    e-mail) ou clica em "Entrar" e volta para cá sem perder a escolha (a sessão continua no login).
     O pedido é gravado pela view pedido(), com as mesmas validações e a mesma baixa de estoque.
     """
-    destino = f"{reverse('loja:entrar')}?next={reverse('loja:checkout')}"
     if request.method == "POST":
         request.session[SESSAO_CHECKOUT] = {k: request.POST.get(k, "") for k in ("produto_id", "tamanho", "quantidade")}
-        if not request.user.is_authenticated:
-            messages.info(request, "Entre na sua conta para finalizar a compra.")
-            return redirect(destino)
         return redirect("loja:checkout")
-    if not request.user.is_authenticated:
-        return redirect(destino)
 
     escolha = request.session.get(SESSAO_CHECKOUT) or {}
     produto_id, tamanho, quantidade = (escolha.get(k, "") for k in ("produto_id", "tamanho", "quantidade"))
@@ -138,20 +133,32 @@ def checkout(request):
     if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
         messages.error(request, f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}.")
         return redirect("loja:produto", id=produto.id)
-    form = EntregaForm(initial={"nome": request.user.get_full_name(), "envio": "padrao", "pagamento": "pix"})
+    visitante = not request.user.is_authenticated
+    nome = "" if visitante else request.user.get_full_name()
+    form = EntregaForm(initial={"nome": nome, "envio": "padrao", "pagamento": "pix"}, visitante=visitante)
     return render(request, "checkout.html", contexto_checkout(request, produto, tamanho, int(quantidade), form))
 
 
 @login_required
 def pedido_confirmado(request, id):
     pedido = get_object_or_404(Pedido.objects.select_related("produto__categoria"), id=id, usuario=request.user)
+    return pagina_do_pedido(request, pedido)
+
+
+def pedido_acompanhar(request, codigo):
+    """Pedido aberto pelo link secreto (compra sem conta). Só quem tem o link vê: o código tem 128 bits."""
+    pedido = get_object_or_404(Pedido.objects.select_related("produto__categoria"), codigo=codigo)
+    return pagina_do_pedido(request, pedido, link=request.build_absolute_uri())
+
+
+def pagina_do_pedido(request, pedido, link=None):
     dias = (1, 3) if pedido.envio == "expresso" else (3, 8)
     base = timezone.localdate(pedido.data)
     # rastreio simulado e acelerado (o mesmo de static/js/mapa.js): separa em 45 s, viaja em 315 s
     segundos = (timezone.now() - pedido.data).total_seconds()
     etapa = 2 if segundos < 45 else 3 if segundos < 360 else 4
     return render(request, "pedido_confirmado.html", {
-        "pedido": pedido, "etapa": etapa, "entregas": entregas([pedido]), "cd": CD,
+        "pedido": pedido, "etapa": etapa, "entregas": entregas([pedido]), "cd": CD, "link": link,
         "chega_de": base + timedelta(days=dias[0]), "chega_ate": base + timedelta(days=dias[1]),
     })
 
@@ -171,7 +178,9 @@ def pedido(request):
     produto = get_object_or_404(Produto, id=int(produto_id))
     volta = redirect("loja:produto", id=produto.id)
 
-    if not request.user.is_authenticated:
+    # compra direta (sem o checkout) continua exigindo conta; pelo checkout dá para comprar sem conta
+    visitante = not request.user.is_authenticated
+    if visitante and not request.POST.get("checkout"):
         messages.info(request, "Entre na sua conta para comprar.")
         return redirect(f"{reverse('loja:entrar')}?next={reverse('loja:produto', args=[produto.id])}")
 
@@ -189,7 +198,7 @@ def pedido(request):
 
     # vindo do checkout: entrega e pagamento são obrigatórios; com erro, a página volta com os avisos
     # (antes de consumir o token, para a pessoa corrigir e enviar de novo)
-    entrega = EntregaForm(request.POST) if request.POST.get("checkout") else None
+    entrega = EntregaForm(request.POST, visitante=visitante) if request.POST.get("checkout") else None
     if entrega and not entrega.is_valid():
         return render(request, "checkout.html",
                       contexto_checkout(request, produto, tamanho, quantidade, entrega, request.POST.get("token_pedido")))
@@ -215,11 +224,15 @@ def pedido(request):
             return volta
         # mesma transação do UPDATE: a linha já está bloqueada, o preço lido é o atual
         preco = Produto.objects.filter(id=produto.id).values_list("preco", flat=True).get()
-        novo = Pedido.objects.create(usuario=request.user, produto=produto, tamanho=tamanho,
-                                     quantidade=quantidade, preco_unitario=preco,
-                                     **(entrega.dados_do_pedido(preco * quantidade) if entrega else {}))
+        dados = entrega.dados_do_pedido(preco * quantidade) if entrega else {}
+        if entrega and not visitante and not dados["entrega_email"]:
+            dados["entrega_email"] = request.user.email
+        novo = Pedido.objects.create(usuario=None if visitante else request.user, produto=produto, tamanho=tamanho,
+                                     quantidade=quantidade, preco_unitario=preco, **dados)
     if entrega:
         request.session.pop(SESSAO_CHECKOUT, None)
+        if visitante:
+            return redirect("loja:pedido_acompanhar", codigo=novo.codigo)
         return redirect("loja:pedido_confirmado", id=novo.id)
     total = f"{novo.total:.2f}".replace(".", ",")
     messages.success(request, f"Pedido #{novo.id} confirmado: {quantidade}× {produto.nome} ({tamanho}) — R$ {total}.")

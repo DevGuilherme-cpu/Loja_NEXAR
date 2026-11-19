@@ -1,3 +1,4 @@
+import secrets
 import unicodedata
 
 from django.conf import settings
@@ -65,7 +66,8 @@ GRADES = {"roupa": ROUPA, "calca": ROUPA, "tenis": [str(n) for n in range(38, 45
 class Pedido(models.Model):
     TAMANHOS = [(t, t) for t in ROUPA] + [(t, t) for t in GRADES["tenis"]] + [("U", "Único")]
 
-    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    # vazio = compra de visitante (sem conta): os dados ficam em entrega_* e entrega_email
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     produto = models.ForeignKey(Produto, on_delete=models.PROTECT)
     tamanho = models.CharField(max_length=2, choices=TAMANHOS)
     quantidade = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
@@ -91,6 +93,10 @@ class Pedido(models.Model):
     envio = models.CharField(max_length=10, choices=ENVIOS, blank=True)
     pagamento = models.CharField(max_length=10, choices=PAGAMENTOS, blank=True)
     frete = models.DecimalField(max_digits=8, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    entrega_email = models.EmailField("e-mail", blank=True)
+    # código secreto do link de acompanhamento (/pedido/acompanhar/<codigo>/): quem não tem conta
+    # acompanha por ele. Impossível de adivinhar (128 bits); vazio em pedidos antigos.
+    codigo = models.CharField(max_length=32, unique=True, null=True, blank=True, editable=False)
 
     class Meta:
         db_table = "pedidos"
@@ -101,12 +107,21 @@ class Pedido(models.Model):
         ]
 
     def __str__(self):
-        return f"Pedido {self.id} - {self.usuario} - {self.produto}"
+        return f"Pedido {self.id} - {self.cliente} - {self.produto}"
+
+    @property
+    def cliente(self):
+        """Nome para mostrar: o usuário da conta ou, na compra sem conta, quem recebe."""
+        if self.usuario_id:
+            return self.usuario.get_username()
+        return f"{self.entrega_nome or 'Cliente'} (visitante)"
 
     def save(self, *args, **kwargs):
         # Sem preço informado (ex.: pedido criado pelo /admin/), grava o preço do produto agora
         if self.preco_unitario is None and self.produto_id:
             self.preco_unitario = self.produto.preco
+        if not self.codigo:
+            self.codigo = secrets.token_urlsafe(16)
         super().save(*args, **kwargs)
 
     @property
