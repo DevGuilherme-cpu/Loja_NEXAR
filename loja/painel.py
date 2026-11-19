@@ -79,8 +79,13 @@ CIDADES = [
 
 def entregas(pedidos):
     lista = []
+    por_uf = {c[1]: c for c in CIDADES} | {CD["uf"]: (CD["cidade"], CD["uf"], CD["lon"], CD["lat"])}
     for p in pedidos:
         cidade, uf, lon, lat = CIDADES[(p.id * 7) % len(CIDADES)]
+        if p.entrega_uf in por_uf:
+            # pedido do checkout: o ponto do mapa é a capital do estado; o nome é a cidade de verdade
+            _, uf, lon, lat = por_uf[p.entrega_uf]
+            cidade = p.entrega_cidade
         lista.append({"id": p.id, "cliente": p.usuario.get_username(),
                       "produto": f"{p.quantidade}× {p.produto.nome}", "total": reais(valor(p)),
                       "cidade": cidade, "uf": uf, "lon": lon, "lat": lat})

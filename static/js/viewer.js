@@ -80,7 +80,8 @@ form?.addEventListener('submit', e => {
   e.preventDefault();
   form.dataset.enviando = '1';
   palco.dataset.vista = '3d';
-  gsap.timeline({ onComplete: () => form.submit() })
+  // requestSubmit com o botão: respeita o formaction dele (o checkout); form.submit() o ignoraria
+  gsap.timeline({ onComplete: () => form.requestSubmit(e.submitter) })
     .to(peca.rotation, { y: `+=${Math.PI * 2}`, duration: 0.8, ease: 'power3.inOut' })
     .to(peca.position, { y: 0.35, duration: 0.4, yoyo: true, repeat: 1, ease: 'power2.out' }, 0);
 });

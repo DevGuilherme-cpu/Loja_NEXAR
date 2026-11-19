@@ -1,0 +1,17 @@
+{# campo de formulário com o erro embaixo dele. Uso: {% include "_campo.html" with campo=form.nome auto="name" %} #}
+<label class="campo{% if classe %} {{ classe }}{% endif %}{% if campo.errors %} com-erro{% endif %}">
+  <span>{{ campo.label }}{% if not campo.field.required %} <small>(opcional)</small>{% endif %}</span>
+  <span class="campo-entrada">
+    <input type="{{ tipo|default:'text' }}" name="{{ campo.html_name }}" id="{{ campo.auto_id }}"
+           {% if tipo != "password" %}value="{{ campo.value|default_if_none:'' }}"{% endif %}
+           {% if campo.field.required %}required{% endif %}
+           {% if campo.field.max_length %}maxlength="{{ campo.field.max_length }}"{% endif %}
+           {% if auto %}autocomplete="{{ auto }}"{% endif %}
+           {% if modo %}inputmode="{{ modo }}"{% endif %}
+           {% if mascara %}data-mascara="{{ mascara }}"{% endif %}
+           {% if dica %}placeholder="{{ dica }}"{% endif %}
+           {% if campo.errors %}aria-invalid="true" aria-describedby="{{ campo.auto_id }}-erro"{% endif %}>
+    {% if tipo == "password" %}<button type="button" class="ver-senha" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button>{% endif %}
+  </span>
+  {% if campo.errors %}<small class="campo-erro" id="{{ campo.auto_id }}-erro">{{ campo.errors.0 }}</small>{% endif %}
+</label>

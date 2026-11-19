@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from functools import wraps
 
 from django.conf import settings
@@ -17,11 +18,11 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, CadastroForm, CategoriaForm, ProdutoForm, email_em_uso,
-                    uploads_habilitados)
+from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, FRETE_GRATIS_ACIMA, CadastroForm, CategoriaForm, EntregaForm,
+                    ProdutoForm, calcular_frete, email_em_uso, uploads_habilitados)
 from .assistente import SUGESTOES, responder
 from .models import Categoria, Pedido, Produto
-from .painel import CD, PERIODOS, entregas, resumo
+from .painel import CD, PERIODOS, entregas, resumo  # entregas/CD também desenham o rastreio do cliente
 from .simulacao import simular_pedidos
 
 # produtos já com a categoria (JOIN)
@@ -85,6 +86,65 @@ def produto(request, id):
     return render(request, "produto.html", contexto)
 
 
+SESSAO_CHECKOUT = "checkout"
+
+
+def contexto_checkout(request, produto, tamanho, quantidade, form, token=None):
+    subtotal = produto.preco * quantidade
+    return {"produto": produto, "tamanho": tamanho, "quantidade": quantidade, "form": form,
+            "token_pedido": token or novo_token_pedido(request), "subtotal": subtotal,
+            "frete_padrao": calcular_frete(subtotal, "padrao"), "frete_expresso": calcular_frete(subtotal, "expresso"),
+            "falta_frete_gratis": FRETE_GRATIS_ACIMA - subtotal}
+
+
+def checkout(request):
+    """O botão Comprar traz para cá: entrega, frete e pagamento (simulado) antes de gravar o pedido.
+
+    POST (da página do produto): guarda a escolha na sessão e redireciona, para o F5 não reenviar.
+    GET: mostra o formulário. Quem não entrou vai para o login e volta para cá sem perder a escolha.
+    O pedido é gravado pela view pedido(), com as mesmas validações e a mesma baixa de estoque.
+    """
+    destino = f"{reverse('loja:entrar')}?next={reverse('loja:checkout')}"
+    if request.method == "POST":
+        request.session[SESSAO_CHECKOUT] = {k: request.POST.get(k, "") for k in ("produto_id", "tamanho", "quantidade")}
+        if not request.user.is_authenticated:
+            messages.info(request, "Entre na sua conta para finalizar a compra.")
+            return redirect(destino)
+        return redirect("loja:checkout")
+    if not request.user.is_authenticated:
+        return redirect(destino)
+
+    escolha = request.session.get(SESSAO_CHECKOUT) or {}
+    produto_id, tamanho, quantidade = (escolha.get(k, "") for k in ("produto_id", "tamanho", "quantidade"))
+    produto = Produto.objects.select_related("categoria").filter(id=int(produto_id)).first() \
+        if inteiro_ascii(produto_id) else None
+    if produto is None:
+        messages.info(request, "Escolha uma peça para comprar.")
+        return redirect("loja:produtos")
+    if tamanho not in produto.tamanhos:
+        messages.error(request, "Escolha um tamanho válido.")
+        return redirect("loja:produto", id=produto.id)
+    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
+        messages.error(request, f"A quantidade deve ser um número de 1 a {QTD_MAX_POR_PEDIDO}.")
+        return redirect("loja:produto", id=produto.id)
+    form = EntregaForm(initial={"nome": request.user.get_full_name(), "envio": "padrao", "pagamento": "pix"})
+    return render(request, "checkout.html", contexto_checkout(request, produto, tamanho, int(quantidade), form))
+
+
+@login_required
+def pedido_confirmado(request, id):
+    pedido = get_object_or_404(Pedido.objects.select_related("produto__categoria"), id=id, usuario=request.user)
+    dias = (1, 3) if pedido.envio == "expresso" else (3, 8)
+    base = timezone.localdate(pedido.data)
+    # rastreio simulado e acelerado (o mesmo de static/js/mapa.js): separa em 45 s, viaja em 315 s
+    segundos = (timezone.now() - pedido.data).total_seconds()
+    etapa = 2 if segundos < 45 else 3 if segundos < 360 else 4
+    return render(request, "pedido_confirmado.html", {
+        "pedido": pedido, "etapa": etapa, "entregas": entregas([pedido]), "cd": CD,
+        "chega_de": base + timedelta(days=dias[0]), "chega_ate": base + timedelta(days=dias[1]),
+    })
+
+
 @require_POST
 def pedido(request):
     """Compra de um produto: grava o pedido e baixa o estoque na mesma transação.
@@ -116,6 +176,13 @@ def pedido(request):
         return volta
     quantidade = int(quantidade)
 
+    # vindo do checkout: entrega e pagamento são obrigatórios; com erro, a página volta com os avisos
+    # (antes de consumir o token, para a pessoa corrigir e enviar de novo)
+    entrega = EntregaForm(request.POST) if request.POST.get("checkout") else None
+    if entrega and not entrega.is_valid():
+        return render(request, "checkout.html",
+                      contexto_checkout(request, produto, tamanho, quantidade, entrega, request.POST.get("token_pedido")))
+
     # depois das validações: um formulário inválido pode ser corrigido e reenviado com o mesmo token
     token = request.POST.get("token_pedido")
     if not consumir_token_pedido(request, token):
@@ -138,7 +205,11 @@ def pedido(request):
         # mesma transação do UPDATE: a linha já está bloqueada, o preço lido é o atual
         preco = Produto.objects.filter(id=produto.id).values_list("preco", flat=True).get()
         novo = Pedido.objects.create(usuario=request.user, produto=produto, tamanho=tamanho,
-                                     quantidade=quantidade, preco_unitario=preco)
+                                     quantidade=quantidade, preco_unitario=preco,
+                                     **(entrega.dados_do_pedido(preco * quantidade) if entrega else {}))
+    if entrega:
+        request.session.pop(SESSAO_CHECKOUT, None)
+        return redirect("loja:pedido_confirmado", id=novo.id)
     total = f"{novo.total:.2f}".replace(".", ",")
     messages.success(request, f"Pedido #{novo.id} confirmado: {quantidade}× {produto.nome} ({tamanho}) — R$ {total}.")
     return volta

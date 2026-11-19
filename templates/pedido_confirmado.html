@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Pedido #{{ pedido.id }} confirmado — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="drop confirmado">
+  <header class="drop-topo">
+    <span class="drop-selo">Pedido #{{ pedido.id }}</span>
+    <h1 class="drop-titulo">Pedido confirmado.</h1>
+    <p class="drop-sub">Valeu, {{ pedido.entrega_nome|default:user.get_username }}. Previsão de entrega entre {{ chega_de|date:"d/m" }} e {{ chega_ate|date:"d/m" }}.</p>
+    <ol class="passos">
+      <li class="feito">Peça escolhida</li>
+      <li class="feito">Entrega e pagamento</li>
+      <li class="atual" aria-current="step">Pedido confirmado</li>
+    </ol>
+  </header>
+
+  <div class="checkout-grade">
+    <div class="checkout-campos">
+      <section class="bloco rastreio" id="rastreio" aria-labelledby="rastreio-titulo">
+        <h2 id="rastreio-titulo"><span class="bloco-num">1</span>Acompanhe a entrega</h2>
+        <p class="rastreio-status" id="rastreio-status" role="status" aria-live="polite">
+          {% if etapa == 2 %}Separando seu pedido no centro de distribuição.{% elif etapa == 3 %}Seu pedido está a caminho.{% else %}Pedido entregue. Aproveite!{% endif %}
+        </p>
+        <div class="rastreio-corpo">
+          <div class="mapa" id="mapa" role="img" data-inicio="{{ pedido.data|date:'c' }}" data-agora="{% now 'c' %}"
+               aria-label="Mapa do Brasil com o trajeto de {{ cd.cidade }} até {{ entregas.0.cidade }} ({{ entregas.0.uf }})."></div>
+          <ol class="linha-tempo">
+            <li data-etapa="0" class="feito"><b>Pedido recebido</b><span>{{ pedido.data|date:"d/m/Y H:i" }}</span></li>
+            <li data-etapa="1" class="feito"><b>Pagamento aprovado</b><span>{{ pedido.get_pagamento_display|default:"Pagamento" }} (simulado)</span></li>
+            <li data-etapa="2" class="{% if etapa > 2 %}feito{% elif etapa == 2 %}atual{% endif %}"><b>Separando no centro de distribuição</b><span>{{ cd.cidade }}, {{ cd.uf }}</span></li>
+            <li data-etapa="3" class="{% if etapa > 3 %}feito{% elif etapa == 3 %}atual{% endif %}"><b>A caminho</b><span>{{ pedido.get_envio_display|default:"Padrão" }}, até {{ entregas.0.cidade }} ({{ entregas.0.uf }})</span></li>
+            <li data-etapa="4" class="{% if etapa == 4 %}feito{% endif %}"><b>Entregue</b><span>previsão real: até {{ chega_ate|date:"d/m/Y" }}</span></li>
+          </ol>
+        </div>
+        <p class="bloco-nota">Rastreio simulado e acelerado para a demonstração: do pedido até a entrega leva 6 minutos. Deixe esta página aberta ou volte por Minha conta.</p>
+        {{ entregas|json_script:"dados-entregas" }}
+        {{ cd|json_script:"dados-cd" }}
+      </section>
+
+      {% if pedido.entrega_cep %}
+      <section class="bloco">
+        <h2><span class="bloco-num">2</span>Entrega</h2>
+        <p class="endereco">
+          <b>{{ pedido.entrega_nome }}</b><br>
+          {{ pedido.entrega_endereco }}<br>
+          {{ pedido.entrega_bairro }}, {{ pedido.entrega_cidade }} ({{ pedido.entrega_uf }})<br>
+          CEP {{ pedido.entrega_cep }}<br>
+          {{ pedido.entrega_telefone }}, CPF {{ pedido.entrega_cpf }}
+        </p>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="resumo">
+      <h2>Resumo</h2>
+      <div class="resumo-item">
+        <div class="resumo-img">{% if pedido.produto.imagem %}<img src="{{ pedido.produto.imagem.url }}" alt="">{% endif %}</div>
+        <div>
+          <b>{{ pedido.produto.nome }}</b>
+          <span>Tamanho {{ pedido.get_tamanho_display }}, {{ pedido.quantidade }} unidade{{ pedido.quantidade|pluralize }}</span>
+        </div>
+      </div>
+      <dl class="resumo-contas">
+        <div><dt>Subtotal</dt><dd>R$ {{ pedido.total|floatformat:2 }}</dd></div>
+        <div><dt>Frete</dt><dd>{% if pedido.frete %}R$ {{ pedido.frete|floatformat:2 }}{% else %}Grátis{% endif %}</dd></div>
+        <div class="resumo-total"><dt>Total</dt><dd>R$ {{ pedido.total_com_frete|floatformat:2 }}</dd></div>
+      </dl>
+      <a class="btn btn-neon" href="{% url 'loja:conta' %}">Ver meus pedidos</a>
+      <a class="link resumo-voltar" href="{% url 'loja:produtos' %}">Continuar comprando</a>
+    </aside>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/mapa.js' %}"></script>
+{% endblock %}

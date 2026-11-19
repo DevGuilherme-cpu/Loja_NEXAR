@@ -4,38 +4,44 @@
 {% block titulo %}Criar conta — NEXAR{% endblock %}
 
 {% block conteudo %}
-<section class="auth">
-  <div class="pdp-3d">
-    <canvas id="viewer-3d" role="img" aria-label="Camiseta NEXAR em 3D" data-lenis-prevent data-id="1" data-categoria="Camisetas" data-cor="#E8641E"></canvas>
+<section class="auth drop-auth">
+  <div class="auth-vitrine">
+    <span class="drop-selo">Nova conta</span>
+    <p class="drop-titulo">Entra pro drop.</p>
+    <ul class="vantagens">
+      <li>Acompanhe cada pedido, do CD até a sua porta.</li>
+      <li>Frete grátis acima de R$ 300 e troca em 30 dias.</li>
+      <li>Personalize as peças em 3D antes de comprar.</li>
+      <li>Saia quando quiser: encerre a conta em Minha conta, sem ligação.</li>
+    </ul>
+    <div class="pdp-3d">
+      <canvas id="viewer-3d" role="img" aria-label="Camiseta NEXAR em 3D" data-lenis-prevent data-id="1"
+              data-categoria="Camisetas" data-modelo="/static/modelos/camiseta.glb" data-cor="#E8641E"></canvas>
+    </div>
   </div>
 
-  <form class="auth-form" method="post">
+  <form class="auth-form" method="post" novalidate>
     {% csrf_token %}
     <h1>Criar conta</h1>
+    <p class="auth-troca">Já tem conta? <a href="{% url 'loja:entrar' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Entrar</a></p>
     {% if form.errors %}
       <div class="erro" role="alert">
-        {% for erros in form.errors.values %}{% for e in erros %}<p>{{ e }}</p>{% endfor %}{% endfor %}
+        {% for e in form.non_field_errors %}<p>{{ e }}</p>{% empty %}<p>Confira os campos marcados em vermelho.</p>{% endfor %}
       </div>
     {% endif %}
-    <label class="campo">Usuário
-      <input type="text" name="username" value="{{ form.username.value|default:'' }}" autocomplete="username" required>
-    </label>
-    <label class="campo">E-mail
-      <input type="email" name="email" value="{{ form.email.value|default:'' }}" autocomplete="email" required>
-    </label>
-    <label class="campo">Senha
-      <input type="password" name="password1" autocomplete="new-password" minlength="8" required>
-    </label>
-    <label class="campo">Confirmar senha
-      <input type="password" name="password2" autocomplete="new-password" minlength="8" required>
-    </label>
+    {% include "_campo.html" with campo=form.username auto="username" dica="Como você quer aparecer" %}
+    {% include "_campo.html" with campo=form.email tipo="email" auto="email" dica="voce@exemplo.com" %}
+    {% include "_campo.html" with campo=form.password1 tipo="password" auto="new-password" %}
+    <p class="forca-senha" id="forca-senha" aria-live="polite"><i aria-hidden="true"></i><span></span></p>
+    {% include "_campo.html" with campo=form.password2 tipo="password" auto="new-password" %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-    <button class="btn" type="submit">Criar conta</button>
-    <p class="auth-troca">Já tem conta? <a href="{% url 'loja:entrar' %}">Entrar</a></p>
+    <button class="btn btn-neon" type="submit">Criar minha conta</button>
+    <p class="auth-nota">Usamos seus dados só para pedidos e entregas. Nada de spam.</p>
   </form>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script type="module" src="{% static 'js/viewer.js' %}"></script>
+<script src="{% static 'js/formularios.js' %}"></script>
 {% endblock %}

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth.forms import AdminUserCreationForm, UserChangeForm, UserCreationForm
@@ -184,3 +186,91 @@ class CategoriaForm(forms.ModelForm):
         if Categoria.objects.filter(nome__iexact=nome).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError(CATEGORIA_REPETIDA, code="repetida")
         return nome
+
+
+# ---------- checkout (entrega e pagamento simulado) ----------
+
+FRETE_GRATIS_ACIMA = Decimal("300")
+FRETES = {"padrao": Decimal("19.90"), "expresso": Decimal("34.90")}
+UFS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI",
+       "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"]
+
+
+def calcular_frete(subtotal, envio):
+    """Padrão grátis acima de R$ 300; expresso sempre cobra (é o que paga a pressa)."""
+    if envio == "padrao" and subtotal >= FRETE_GRATIS_ACIMA:
+        return Decimal("0")
+    return FRETES[envio]
+
+
+def so_digitos(texto):
+    return "".join(c for c in texto if c.isascii() and c.isdigit())
+
+
+def cpf_valido(cpf):
+    """Confere os dois dígitos verificadores (o mesmo cálculo da Receita)."""
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
+        return False
+    for tamanho in (9, 10):
+        soma = sum(int(cpf[i]) * (tamanho + 1 - i) for i in range(tamanho))
+        if (soma * 10 % 11) % 10 != int(cpf[tamanho]):
+            return False
+    return True
+
+
+class EntregaForm(forms.Form):
+    nome = forms.CharField(label="Nome completo", max_length=100)
+    cpf = forms.CharField(label="CPF", max_length=14)
+    telefone = forms.CharField(label="Celular", max_length=16)
+    cep = forms.CharField(label="CEP", max_length=9)
+    endereco = forms.CharField(label="Rua ou avenida", max_length=120)
+    numero = forms.CharField(label="Número", max_length=10)
+    complemento = forms.CharField(label="Complemento", max_length=60, required=False)
+    bairro = forms.CharField(label="Bairro", max_length=60)
+    cidade = forms.CharField(label="Cidade", max_length=60)
+    uf = forms.ChoiceField(label="Estado", choices=[(uf, uf) for uf in UFS])
+    envio = forms.ChoiceField(label="Entrega", choices=[("padrao", "Padrão"), ("expresso", "Expresso")])
+    pagamento = forms.ChoiceField(label="Pagamento", choices=[("pix", "Pix"), ("cartao", "Cartão"), ("boleto", "Boleto")])
+
+    def clean_nome(self):
+        nome = " ".join(self.cleaned_data["nome"].split())
+        if len(nome.split()) < 2:
+            raise forms.ValidationError("Digite nome e sobrenome.")
+        return nome
+
+    def clean_cpf(self):
+        cpf = so_digitos(self.cleaned_data["cpf"])
+        if not cpf_valido(cpf):
+            raise forms.ValidationError("CPF inválido. Confira os números.")
+        return cpf
+
+    def clean_telefone(self):
+        tel = so_digitos(self.cleaned_data["telefone"])
+        if len(tel) not in (10, 11):
+            raise forms.ValidationError("Digite o celular com DDD.")
+        return tel
+
+    def clean_cep(self):
+        cep = so_digitos(self.cleaned_data["cep"])
+        if len(cep) != 8:
+            raise forms.ValidationError("O CEP tem 8 números.")
+        return cep
+
+    def dados_do_pedido(self, subtotal):
+        """Campos do Pedido. O CPF completo não sai daqui: só os 2 últimos dígitos são gravados."""
+        d = self.cleaned_data
+        endereco = f"{d['endereco']}, {d['numero']}" + (f" ({d['complemento']})" if d["complemento"] else "")
+        tel = d["telefone"]
+        return {
+            "entrega_nome": d["nome"],
+            "entrega_cpf": f"***.***.***-{d['cpf'][-2:]}",
+            "entrega_telefone": f"({tel[:2]}) {tel[2:-4]}-{tel[-4:]}",
+            "entrega_cep": f"{d['cep'][:5]}-{d['cep'][5:]}",
+            "entrega_endereco": endereco,
+            "entrega_bairro": d["bairro"],
+            "entrega_cidade": d["cidade"],
+            "entrega_uf": d["uf"],
+            "envio": d["envio"],
+            "pagamento": d["pagamento"],
+            "frete": calcular_frete(subtotal, d["envio"]),
+        }

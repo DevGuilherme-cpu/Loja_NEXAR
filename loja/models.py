@@ -76,6 +76,22 @@ class Pedido(models.Model):
                                          validators=[MinValueValidator(0)])
     data = models.DateTimeField(auto_now_add=True)
 
+    # entrega e pagamento (checkout). Vazios em pedidos antigos e nos feitos pelo painel/admin.
+    ENVIOS = [("padrao", "Padrão"), ("expresso", "Expresso")]
+    PAGAMENTOS = [("pix", "Pix"), ("cartao", "Cartão"), ("boleto", "Boleto")]
+    entrega_nome = models.CharField("nome de quem recebe", max_length=100, blank=True)
+    # só os 2 últimos dígitos (***.***.***-12): o CPF completo é conferido e não é guardado
+    entrega_cpf = models.CharField("CPF (mascarado)", max_length=14, blank=True)
+    entrega_telefone = models.CharField("telefone", max_length=15, blank=True)
+    entrega_cep = models.CharField("CEP", max_length=9, blank=True)
+    entrega_endereco = models.CharField("endereço", max_length=200, blank=True)
+    entrega_bairro = models.CharField("bairro", max_length=60, blank=True)
+    entrega_cidade = models.CharField("cidade", max_length=60, blank=True)
+    entrega_uf = models.CharField("UF", max_length=2, blank=True)
+    envio = models.CharField(max_length=10, choices=ENVIOS, blank=True)
+    pagamento = models.CharField(max_length=10, choices=PAGAMENTOS, blank=True)
+    frete = models.DecimalField(max_digits=8, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+
     class Meta:
         db_table = "pedidos"
         ordering = ["-data"]
@@ -98,3 +114,7 @@ class Pedido(models.Model):
         if self.preco_unitario is None:
             return None
         return self.preco_unitario * self.quantidade
+
+    @property
+    def total_com_frete(self):
+        return None if self.total is None else self.total + self.frete
