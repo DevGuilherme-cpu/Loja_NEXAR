@@ -3808,7 +3808,140 @@ html.a11y-links a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* ---- tamanhos de celular: topo, menu e cards ---- */
+  .loja .aviso-frete {
+    padding-block: .35rem;
+    font-size: .64rem;
+  }
+
+  /* cabe numa linha só */
+  .loja .aviso-frete b {
+    display: none;
+  }
+
+  .loja .chips .chip {
+    padding: .5rem .85rem;
+    font-size: .85rem;
+  }
+
+  .loja .topo {
+    gap: .5rem .75rem;
+    padding: .6rem var(--margem);
+  }
+
   .loja .marca {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+  }
+
+  .loja .topo-acoes {
+    gap: .6rem;
+  }
+
+  .loja .topo-acoes>a,
+  .loja .topo-sair button {
+    font-size: .72rem;
+  }
+
+  .loja .topo-usuario {
+    max-width: 6.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .loja .topo-busca input {
+    width: 6.5rem;
+    padding: .4rem .75rem;
+    font-size: .85rem;
+  }
+
+  .loja .topo-busca input:focus {
+    width: 9rem;
+  }
+
+  /* no celular o botão de acessibilidade vira ícone discreto: o neon fica para comprar */
+  .loja .a11y-botao {
+    width: 40px;
+    min-height: 40px;
+    background: transparent;
+    color: var(--papel);
+    box-shadow: inset 0 0 0 1.5px var(--palco-escuro);
+  }
+
+  .loja .a11y-botao:hover,
+  .loja .a11y-botao[aria-expanded="true"] {
+    background: var(--papel);
+    color: var(--tinta);
+  }
+
+  /* o menu abre em toda a largura, logo abaixo do topo (antes saía pela esquerda da tela) */
+  .a11y {
+    position: static;
+  }
+
+  .a11y-menu {
+    left: var(--margem);
+    right: var(--margem);
+    top: 100%;
+    min-width: 0;
+    max-width: 360px;
+    margin-inline: auto;
+  }
+
+  .loja .menu {
+    gap: .9rem;
+    font-size: .72rem;
+    /* esmaece a borda direita: mostra que o menu desliza para o lado */
+    mask-image: linear-gradient(90deg, var(--tinta) 82%, transparent);
+  }
+
+  .loja .menu a {
+    font-size: .72rem;
+    white-space: nowrap;
+  }
+
+  .loja .menu a:last-child {
+    padding-right: 2rem;
+  }
+
+  /* cards: nome e preço no tamanho do card, etiquetas menores */
+  .loja .card-info {
+    padding-top: .6rem;
+  }
+
+  .loja .card-info span:first-child {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: .8rem;
+    line-height: 1.25;
+  }
+
+  .loja .card-info span:last-child {
+    font-size: .85rem;
+    font-weight: 600;
+  }
+
+  .loja .card-tag {
+    left: .5rem;
+    top: .5rem;
+    padding: .22rem .45rem;
+    font-size: .6rem;
+  }
+
+  .loja .card-tag-hot {
+    left: auto;
+    right: .5rem;
+  }
+
+  /* uma etiqueta só: "Últimas peças"/"Esgotado" vale mais que o nome da categoria */
+  .loja .card-img:has(.card-tag-hot) .card-tag:not(.card-tag-hot) {
+    display: none;
+  }
+
+  .loja .card-img:has(.card-tag-hot) .card-tag-hot {
+    left: .5rem;
+    right: auto;
   }
 }
