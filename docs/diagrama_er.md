@@ -1,65 +1,58 @@
-# Diagrama ER - NEXAR
+# Modelo de dados da NEXAR
+
+O diagrama mostra os campos principais do catálogo e dos pedidos. Os nomes vêm dos [modelos da loja](../loja/models.py) e a tabela `auth_user` pertence ao Django.
 
 ```mermaid
 erDiagram
-    categorias ||--o{ produtos : "classifica"
-    produtos   ||--o{ pedidos  : "aparece em"
-    auth_user  ||--o{ pedidos  : "faz"
+    categorias ||--o{ produtos : classifica
+    produtos ||--o{ pedidos : "aparece em"
+    auth_user o|--o{ pedidos : faz
 
     categorias {
         BIGINT id PK
-        VARCHAR nome UK "50"
+        VARCHAR nome UK
     }
 
     produtos {
         BIGINT id PK
-        VARCHAR nome "100"
-        LONGTEXT descricao
-        DECIMAL preco "10,2 - CHECK >= 0"
-        INT estoque "UNSIGNED"
-        VARCHAR imagem "100"
-        VARCHAR imagem_2 "100"
-        VARCHAR modelo_3d "255"
-        VARCHAR cor "7 - ex.: #1F2F6B"
         BIGINT categoria_id FK
+        VARCHAR nome
+        TEXT descricao
+        DECIMAL preco "10,2"
+        INT estoque
+        VARCHAR imagem
+        VARCHAR imagem_2
+        VARCHAR modelo_3d
+        VARCHAR cor
     }
 
     auth_user {
         INT id PK
-        VARCHAR username UK "150"
-        VARCHAR password "128"
-        VARCHAR email "254 - único sem caixa (se preenchido)"
-        TINYINT is_staff
-        TINYINT is_active
-        DATETIME date_joined
+        VARCHAR username UK
+        VARCHAR email
+        BOOLEAN is_staff
+        BOOLEAN is_active
     }
 
     pedidos {
         BIGINT id PK
-        INT usuario_id FK
+        INT usuario_id FK "opcional"
         BIGINT produto_id FK
-        VARCHAR tamanho "P, M, G ou GG"
-        INT quantidade "CHECK >= 1"
-        DECIMAL preco_unitario "10,2 - preço na compra"
+        VARCHAR tamanho
+        INT quantidade
+        DECIMAL preco_unitario "10,2"
+        VARCHAR entrega_nome
+        VARCHAR entrega_email
+        VARCHAR envio
+        VARCHAR pagamento
+        DECIMAL frete "8,2"
+        VARCHAR codigo UK "acompanhamento"
         DATETIME data
     }
 ```
 
-`auth_user` é a tabela de usuários do próprio Django (aqui aparecem só as colunas principais).
-O e-mail, quando preenchido, é único sem diferenciar maiúsculas/minúsculas (índice
-`auth_user_email_ci_uniq` sobre `NULLIF(LOWER(TRIM(email)), '')`, migration `loja.0005`).
-`produtos.cor` guarda a cor da peça usada no visualizador 3D (migration `loja.0002`).
-
-**Relacionamentos.** Uma categoria tem vários produtos e cada produto pertence a exatamente uma
-categoria (`produtos.categoria_id`). Um cliente (`auth_user`) faz vários pedidos, e um produto
-aparece em vários pedidos; cada pedido liga um cliente a um produto (`pedidos.usuario_id` e
-`pedidos.produto_id`), com tamanho e quantidade. Todas as relações são 1:N.
-
-**PROTECT.** As três chaves estrangeiras usam `on_delete=PROTECT` no Django e, no MySQL, a FK
-padrão (RESTRICT). Assim não dá para apagar uma categoria que ainda tem produtos, nem um produto
-ou cliente que já tem pedidos: o histórico de vendas nunca fica com referências quebradas.
-
-**Por que `preco_unitario`.** O pedido grava o preço do produto no momento da compra, e o total é
-`preco_unitario * quantidade`. Antes o total era calculado com o preço atual do produto, então um
-reajuste mudava o valor de pedidos antigos. Agora o reajuste só vale para compras novas.
-CHECK constraints garantem `quantidade >= 1`, `preco >= 0` e `preco_unitario >= 0`.
+- **Catálogo.** Cada produto pertence a uma categoria e registra preço, estoque, caminhos das fotos e do modelo 3D e a cor usada no visualizador.
+- **Pedidos.** Cada pedido aponta para um produto e pode apontar para uma conta. Na compra como visitante, `usuario_id` fica vazio. O pedido guarda os dados de contato e envio, e o código identifica o link de acompanhamento.
+- **Histórico.** O Django usa `on_delete=PROTECT` para preservar categorias com produtos, produtos com pedidos e contas vinculadas a pedidos.
+- **Valores.** Cada pedido registra o preço unitário no momento da compra. O subtotal é `preco_unitario × quantidade` e o total inclui o frete.
+- **Integridade.** O banco exige preços não negativos e uma quantidade mínima de uma unidade. Os nomes das categorias e os e-mails preenchidos são verificados para evitar duplicatas, desconsiderando maiúsculas e espaços nas extremidades.
