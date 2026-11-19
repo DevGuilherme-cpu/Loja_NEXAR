@@ -18,6 +18,9 @@ class PedidoAdmin(admin.ModelAdmin):
         # Na criação pode ficar vazio (Pedido.save() copia o preço do produto);
         # depois de gravado, o preço da compra não muda pelo admin.
         campos = super().get_readonly_fields(request, obj)
+        # entrega, frete e pagamento vêm do checkout: a equipe consulta, mas não altera (nem o CPF mascarado)
+        campos = (*campos, "entrega_nome", "entrega_cpf", "entrega_telefone", "entrega_cep", "entrega_endereco",
+                  "entrega_bairro", "entrega_cidade", "entrega_uf", "envio", "pagamento", "frete")
         return (*campos, "preco_unitario") if obj is not None else campos
 
 

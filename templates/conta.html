@@ -17,8 +17,9 @@
       <ul class="lista-painel">
         {% for p in pedidos %}
           <li>
-            <span><b>#{{ p.id }}</b> {{ p.data|date:"d/m/Y" }}: {{ p.quantidade }}× <a href="{% url 'loja:produto' p.produto_id %}">{{ p.produto.nome }}</a> ({{ p.get_tamanho_display }})</span>
+            <span><a href="{% url 'loja:pedido_confirmado' p.id %}"><b>#{{ p.id }}</b></a> {{ p.data|date:"d/m/Y" }}: {{ p.quantidade }}× <a href="{% url 'loja:produto' p.produto_id %}">{{ p.produto.nome }}</a> ({{ p.get_tamanho_display }})</span>
             <span class="lista-valor">R$ {{ p.total|floatformat:2 }}</span>
+            <a class="btn-sm" href="{% url 'loja:pedido_confirmado' p.id %}#rastreio">Acompanhar entrega</a>
           </li>
         {% empty %}
           <li class="vazio">Você ainda não fez nenhum pedido. <a class="link" href="{% url 'loja:produtos' %}">Ver as peças</a></li>

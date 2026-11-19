@@ -71,7 +71,7 @@ class VisitanteTests(TestCase):
 
     def test_pagina_do_produto_sem_token_para_visitante(self):
         resposta = self.client.get(reverse("loja:produto", args=[self.produto.id]))
-        self.assertContains(resposta, f'action="{URL_PEDIDO}"')
+        self.assertContains(resposta, f'action="{reverse("loja:checkout")}"')  # Comprar passa pelo checkout
         self.assertNotContains(resposta, 'name="token_pedido"')
         self.assertNotIn("token_pedido", resposta.context)
 
@@ -109,7 +109,7 @@ class CompraValidaTests(PedidoBase):
     def test_pagina_do_produto_tem_form_e_token_para_logado(self):
         resposta = self.client.get(self.url_produto)
         token = resposta.context["token_pedido"]
-        self.assertContains(resposta, f'action="{URL_PEDIDO}"')
+        self.assertContains(resposta, f'action="{reverse("loja:checkout")}"')  # Comprar passa pelo checkout
         self.assertContains(resposta, f'name="token_pedido" value="{token}"')
         self.assertContains(resposta, "csrfmiddlewaretoken")
 

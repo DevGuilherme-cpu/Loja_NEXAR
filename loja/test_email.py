@@ -176,8 +176,12 @@ class MigrationEmailUnicoTest(TransactionTestCase):
         executor.migrate(alvo)
 
     def tearDown(self):
-        # limpa os dados de teste e volta o banco para o leaf (índice recriado)
-        User.objects.all().delete()
+        # limpa os dados de teste e volta o banco para o leaf (índice recriado).
+        # Apaga com o User do estado atual das migrations: o User de hoje consulta colunas de Pedido
+        # (entrega, frete...) que ainda não existem neste ponto do histórico.
+        executor = MigrationExecutor(connection)
+        atual = executor.loader.project_state(list(executor.loader.applied_migrations)).apps
+        atual.get_model("auth", "User").objects.all().delete()
         self.migrar(MigrationExecutor(connection).loader.graph.leaf_nodes())
 
     def test_duplicados_barram_a_migration(self):

@@ -59,6 +59,13 @@ if (caixa && cd && entregas.length) {
   el('circle', { cx, cy, r: 5, class: 'mapa-cd' }, camPontos);
   el('text', { x: cx + 9, y: cy + 14, class: 'mapa-rotulo' }, camPontos).textContent = 'CD ' + cd.cidade;
 
+  // modo rastreio (página do pedido do cliente): uma entrega só, andando pelo tempo desde a compra
+  const inicio = caixa.dataset.inicio ? Date.parse(caixa.dataset.inicio) : null;
+  const desvio = caixa.dataset.agora ? Date.parse(caixa.dataset.agora) - Date.now() : 0;  // relógio do servidor
+  const SEPARAR = 45, VIAGEM = 315;  // segundos: simulação acelerada (6 min do pedido até a entrega)
+  const etapas = [...document.querySelectorAll('[data-etapa]')];
+  const statusRastreio = document.getElementById('rastreio-status');
+
   const lista = document.getElementById('entregas-lista');
   const contas = Object.fromEntries([...document.querySelectorAll('[data-conta]')].map(n => [n.dataset.conta, n]));
 
@@ -80,7 +87,7 @@ if (caixa && cd && entregas.length) {
       comprimento: caminho.getTotalLength(),
       ciclo: 26 + distancia / 90,       // segundos de animação por viagem
       fase: (e.id * 0.618) % 1,         // cada veículo começa num ponto diferente
-      item: lista.querySelector(`[data-id="${e.id}"]`),
+      item: lista?.querySelector(`[data-id="${e.id}"]`),
     };
   });
 
@@ -98,15 +105,39 @@ if (caixa && cd && entregas.length) {
     if (selecionada) camVeiculos.appendChild(selecionada.veiculo);
   }
   rotas.forEach(r => {
+    if (!r.item) return;
     r.item.addEventListener('click', () => selecionar(r));
     r.veiculo.addEventListener('click', () => {
       selecionar(r);
       r.item.scrollIntoView({ block: 'nearest', behavior: anima ? 'smooth' : 'auto' });
     });
   });
+  if (inicio !== null) {
+    rotas[0].caminho.classList.add('ativa');
+    rotas[0].veiculo.classList.add('ativo');
+    rotas[0].destino.classList.add('ativo');
+  }
 
-  // progresso de 0 a 1.25: até 0.1 separando, até 1 na estrada, depois entregue (parado no destino)
-  const progresso = (r, t) => ((t / r.ciclo + r.fase) % 1.25);
+  const segundos = () => (Date.now() + desvio - inicio) / 1000;
+  // progresso de 0 a 1.25: até 0.1 separando, até 1 na estrada, depois entregue (parado no destino).
+  // No painel as viagens se repetem; no rastreio o progresso vem do tempo desde a compra.
+  const progresso = (r, t) => {
+    if (inicio === null) return (t / r.ciclo + r.fase) % 1.25;
+    const s = segundos();
+    return s < SEPARAR ? 0.1 * s / SEPARAR : Math.min(0.1 + 0.9 * (s - SEPARAR) / VIAGEM, 1.1);
+  };
+
+  function rastreio(estado) {
+    const atual = { separando: 2, rota: 3, entregue: 4 }[estado];
+    etapas.forEach(li => {
+      const n = Number(li.dataset.etapa);
+      li.classList.toggle('feito', n < atual || (n === atual && estado === 'entregue'));
+      li.classList.toggle('atual', n === atual && estado !== 'entregue');
+    });
+    const falta = Math.max(1, Math.ceil((SEPARAR + VIAGEM - segundos()) / 60));
+    statusRastreio.textContent = estado === 'separando' ? 'Separando seu pedido no centro de distribuição.' :
+      estado === 'rota' ? `Seu pedido está a caminho: chega em cerca de ${falta} min.` : 'Pedido entregue. Aproveite!';
+  }
 
   function tempo(h) {
     return h < 1 ? `~${Math.max(5, Math.round(h * 60 / 5) * 5)} min` : `~${Math.round(h)} h`;
@@ -129,7 +160,8 @@ if (caixa && cd && entregas.length) {
       total[estado]++;
       r.veiculo.classList.toggle('parado', estado !== 'rota');
       r.destino.classList.toggle('chegou', estado === 'entregue');
-      if (textos) {
+      if (textos && inicio !== null) rastreio(estado);
+      if (textos && r.item) {
         r.item.dataset.estado = estado;
         r.item.querySelector('.entrega-trilho span').style.width = `${Math.round(naRua * 100)}%`;
         r.item.querySelector('.entrega-status').textContent =
@@ -142,6 +174,7 @@ if (caixa && cd && entregas.length) {
       for (const k in contas) contas[k].textContent = total[k];
     }
     if (anima) requestAnimationFrame(quadro);
+    else if (inicio !== null) setTimeout(() => quadro(performance.now()), 1000);  // sem animação: anda de segundo em segundo
   }
   requestAnimationFrame(quadro);
 }

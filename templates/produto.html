@@ -45,7 +45,8 @@
       </div>
     </div>
 
-    <form class="pdp-form" method="post" action="{% url 'loja:pedido' %}">
+    {# Comprar passa pelo checkout (entrega e pagamento); quem grava o pedido é /pedido/, chamado de lá #}
+    <form class="pdp-form" method="post" action="{% url 'loja:checkout' %}">
       {% csrf_token %}
       {% if token_pedido %}<input type="hidden" name="token_pedido" value="{{ token_pedido }}">{% endif %}
       <input type="hidden" name="produto_id" value="{{ produto.id }}">

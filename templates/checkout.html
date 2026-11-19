@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Finalizar compra — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="drop checkout">
+  <header class="drop-topo">
+    <span class="drop-selo">Checkout seguro</span>
+    <h1 class="drop-titulo">Falta pouco.</h1>
+    <ol class="passos">
+      <li class="feito">Peça escolhida</li>
+      <li class="atual" aria-current="step">Entrega e pagamento</li>
+      <li>Pedido confirmado</li>
+    </ol>
+  </header>
+
+  {% if form.errors %}
+    <p class="aviso error checkout-aviso" role="alert">Confira os campos marcados em vermelho.</p>
+  {% endif %}
+
+  <form class="checkout-grade" method="post" action="{% url 'loja:pedido' %}" id="checkout"
+        data-subtotal="{{ subtotal|stringformat:'.2f' }}" data-frete-padrao="{{ frete_padrao|stringformat:'.2f' }}"
+        data-frete-expresso="{{ frete_expresso|stringformat:'.2f' }}">
+    {% csrf_token %}
+    <input type="hidden" name="checkout" value="1">
+    <input type="hidden" name="produto_id" value="{{ produto.id }}">
+    <input type="hidden" name="tamanho" value="{{ tamanho }}">
+    <input type="hidden" name="quantidade" value="{{ quantidade }}">
+    <input type="hidden" name="token_pedido" value="{{ token_pedido }}">
+
+    <div class="checkout-campos">
+      <fieldset class="bloco">
+        <legend><span class="bloco-num">1</span>Seus dados</legend>
+        <div class="bloco-campos">
+          {% include "_campo.html" with campo=form.nome auto="name" classe="largo" %}
+          {% include "_campo.html" with campo=form.cpf auto="off" modo="numeric" mascara="cpf" dica="000.000.000-00" %}
+          {% include "_campo.html" with campo=form.telefone tipo="tel" auto="tel-national" modo="tel" mascara="telefone" dica="(11) 91234-5678" %}
+        </div>
+      </fieldset>
+
+      <fieldset class="bloco">
+        <legend><span class="bloco-num">2</span>Onde entregar</legend>
+        <div class="bloco-campos">
+          {% include "_campo.html" with campo=form.cep auto="postal-code" modo="numeric" mascara="cep" dica="00000-000" %}
+          <p class="cep-status" id="cep-status" role="status" aria-live="polite"></p>
+          {% include "_campo.html" with campo=form.endereco auto="address-line1" classe="largo" %}
+          {% include "_campo.html" with campo=form.numero modo="numeric" %}
+          {% include "_campo.html" with campo=form.complemento auto="address-line2" dica="Apto, bloco, referência" %}
+          {% include "_campo.html" with campo=form.bairro auto="address-level3" %}
+          {% include "_campo.html" with campo=form.cidade auto="address-level2" %}
+          <label class="campo{% if form.uf.errors %} com-erro{% endif %}">
+            <span>Estado</span>
+            <select name="uf" id="id_uf" autocomplete="address-level1" required>
+              <option value="">Escolha...</option>
+              {% for valor, rotulo in form.fields.uf.choices %}
+                <option value="{{ valor }}"{% if form.uf.value == valor %} selected{% endif %}>{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+            {% if form.uf.errors %}<small class="campo-erro">{{ form.uf.errors.0 }}</small>{% endif %}
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="bloco">
+        <legend><span class="bloco-num">3</span>Como chega</legend>
+        <div class="opcoes">
+          <label class="opcao">
+            <input type="radio" name="envio" value="padrao"{% if form.envio.value != "expresso" %} checked{% endif %}>
+            <span class="opcao-corpo">
+              <b>Padrão</b>
+              <span>3 a 8 dias úteis</span>
+              <span class="opcao-preco">{% if frete_padrao %}R$ {{ frete_padrao|floatformat:2 }}{% else %}Grátis{% endif %}</span>
+            </span>
+          </label>
+          <label class="opcao">
+            <input type="radio" name="envio" value="expresso"{% if form.envio.value == "expresso" %} checked{% endif %}>
+            <span class="opcao-corpo">
+              <b>Expresso</b>
+              <span>1 a 3 dias úteis</span>
+              <span class="opcao-preco">R$ {{ frete_expresso|floatformat:2 }}</span>
+            </span>
+          </label>
+        </div>
+        {% if falta_frete_gratis > 0 %}<p class="bloco-nota">Faltam R$ {{ falta_frete_gratis|floatformat:2 }} para o frete padrão sair grátis.</p>{% endif %}
+      </fieldset>
+
+      <fieldset class="bloco">
+        <legend><span class="bloco-num">4</span>Pagamento</legend>
+        <div class="opcoes opcoes-3">
+          {% for valor, rotulo in form.fields.pagamento.choices %}
+            <label class="opcao">
+              <input type="radio" name="pagamento" value="{{ valor }}"{% if form.pagamento.value == valor or not form.pagamento.value and forloop.first %} checked{% endif %}>
+              <span class="opcao-corpo"><b>{{ rotulo }}</b>
+                <span>{% if valor == "pix" %}Aprovação na hora{% elif valor == "cartao" %}Até 3x sem juros{% else %}Vence em 3 dias úteis{% endif %}</span>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+        <p class="bloco-nota simulado"><b>Pagamento simulado.</b> Este é um projeto de demonstração: nenhum dado de cartão é pedido e nada é cobrado.</p>
+      </fieldset>
+    </div>
+
+    <aside class="resumo" aria-labelledby="resumo-titulo">
+      <h2 id="resumo-titulo">Seu pedido</h2>
+      <div class="resumo-item">
+        <div class="resumo-img">
+          {% if produto.imagem %}<img src="{{ produto.imagem.url }}" alt="">{% endif %}
+        </div>
+        <div>
+          <b>{{ produto.nome }}</b>
+          <span>Tamanho {% if tamanho == "U" %}único{% else %}{{ tamanho }}{% endif %}, {{ quantidade }} unidade{{ quantidade|pluralize }}</span>
+          <a class="link" href="{% url 'loja:produto' produto.id %}">Trocar</a>
+        </div>
+      </div>
+      <dl class="resumo-contas">
+        <div><dt>Subtotal</dt><dd>R$ {{ subtotal|floatformat:2 }}</dd></div>
+        <div><dt>Frete</dt><dd data-frete>{% if frete_padrao %}R$ {{ frete_padrao|floatformat:2 }}{% else %}Grátis{% endif %}</dd></div>
+        <div class="resumo-total"><dt>Total</dt><dd data-total>R$ {{ subtotal|add:frete_padrao|floatformat:2 }}</dd></div>
+      </dl>
+      <button class="btn btn-neon" type="submit">Confirmar pedido</button>
+      <ul class="resumo-seguranca">
+        <li>Conexão protegida (HTTPS) no site publicado.</li>
+        <li>O CPF é conferido e guardado só com os 2 últimos dígitos.</li>
+        <li>Troca grátis em 30 dias e arrependimento em 7 dias.</li>
+      </ul>
+    </aside>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/formularios.js' %}"></script>
+{% endblock %}

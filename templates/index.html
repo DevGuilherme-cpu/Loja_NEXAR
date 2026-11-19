@@ -9,15 +9,68 @@
       <li data-categoria="{{ p.categoria }}" data-cor="{{ p.cor }}" data-modelo="{{ p.modelo_3d|default:'' }}" data-media="{% get_media_prefix %}"></li>
     {% endfor %}
   </ul>
+  <span class="hero-mira hero-mira-1" aria-hidden="true"></span>
+  <span class="hero-mira hero-mira-2" aria-hidden="true"></span>
+  <svg class="hero-giro" viewBox="0 0 120 120" aria-hidden="true">
+    <defs><path id="giro-caminho" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0"></path></defs>
+    <text><textPath href="#giro-caminho">Gire antes de comprar • NEXAR 3D • </textPath></text>
+    <circle cx="60" cy="60" r="9"></circle>
+  </svg>
   <div class="hero-texto">
-    <h1 id="hero-titulo" data-split>Roupa que você gira antes de comprar.</h1>
-    <a class="btn" href="{% url 'loja:produtos' %}">Ver as peças</a>
+    <span class="drop-selo">Nova temporada</span>
+    <h1 id="hero-titulo" data-split>Veste o agora.</h1>
+    <p class="hero-sub">Drops rápidos. Peças em 3D. Gire antes de comprar.</p>
+    <a class="btn btn-neon" href="{% url 'loja:produtos' %}">Ver o drop</a>
+    <p class="hero-alta"><b>Em alta:</b>
+      {% for c in categorias|slice:":3" %}<a href="{% url 'loja:produtos' %}?categoria={{ c.id }}">{{ c.nome }}</a>{% endfor %}
+    </p>
+  </div>
+</section>
+
+{% if drop %}
+<section class="drop-faixa" aria-label="Drop limitado">
+  <div class="contagem" data-fim="{{ fim_drop|date:'c' }}">
+    <p>Drop limitado termina em</p>
+    <ol>
+      <li><b data-unidade="dias">--</b><span>dias</span></li>
+      <li><b data-unidade="horas">--</b><span>horas</span></li>
+      <li><b data-unidade="min">--</b><span>min</span></li>
+      <li><b data-unidade="seg">--</b><span>seg</span></li>
+    </ol>
+  </div>
+  <a class="drop-banner" href="{% url 'loja:produto' drop.id %}">
+    {% if drop.imagem %}<img src="{{ drop.imagem.url }}" alt="">{% endif %}
+    <div class="drop-banner-texto">
+      <h2>{{ drop.nome }}</h2>
+      <p>{{ drop.descricao }}</p>
+    </div>
+    <div class="drop-banner-acao">
+      <span class="btn">Comprar agora</span>
+      <span class="drop-restam">{{ drop.estoque }} restante{{ drop.estoque|pluralize }}</span>
+      <span class="drop-barra" aria-hidden="true"><span style="--pct: {% widthratio drop.estoque 12 100 %}%"></span></span>
+    </div>
+  </a>
+</section>
+{% endif %}
+
+<section class="section colecoes" aria-labelledby="colecoes-titulo">
+  <h2 id="colecoes-titulo" class="colecoes-rotulo">Coleções</h2>
+  <div class="colecoes-grade">
+    {% for c in categorias %}
+      {% with p=c.produto_set.first %}
+        <a class="colecao" href="{% url 'loja:produtos' %}?categoria={{ c.id }}">
+          {% if p.imagem %}<img src="{{ p.imagem.url }}" alt="" loading="lazy">{% endif %}
+          <span class="colecao-nome">{{ c.nome }}</span>
+          <span class="colecao-ver">Ver peças</span>
+        </a>
+      {% endwith %}
+    {% endfor %}
   </div>
 </section>
 
 <section class="section">
   <div class="section-head">
-    <h2 class="secao-titulo">Destaques</h2>
+    <h2 class="secao-titulo">Em alta</h2>
     <a class="link" href="{% url 'loja:produtos' %}">Ver todas</a>
   </div>
   <div class="grid">
@@ -25,18 +78,26 @@
   </div>
 </section>
 
-<section class="section" aria-labelledby="cats-titulo">
-  <h2 id="cats-titulo" class="sr">Categorias</h2>
-  <nav class="cats" aria-label="Categorias">
-    {% for c in categorias %}
-      {% with p=c.produto_set.first %}
-        <a href="{% url 'loja:produtos' %}?categoria={{ c.id }}" {% if p.imagem %}data-foto="{{ p.imagem.url }}"{% endif %}>{{ c.nome|lower }}</a>
-      {% endwith %}
+{% if looks %}
+<section class="section looks" aria-labelledby="looks-titulo">
+  <div class="looks-texto">
+    <h2 id="looks-titulo" class="secao-titulo">#NexarFit</h2>
+    <p>Como as peças ficam no corpo. Toque num look para ver a peça.</p>
+    <a class="btn" href="{% url 'loja:produtos' %}">Ver todas as peças</a>
+  </div>
+  <div class="looks-grade">
+    {% for p in looks %}
+      <a class="look" href="{% url 'loja:produto' p.id %}">
+        <img src="{{ p.imagem_2.url }}" alt="{{ p.nome }} sendo usado" loading="lazy">
+        <span>{{ p.nome }}</span>
+      </a>
     {% endfor %}
-  </nav>
+  </div>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script type="module" src="{% static 'js/hero.js' %}"></script>
+<script src="{% static 'js/home.js' %}"></script>
 {% endblock %}
