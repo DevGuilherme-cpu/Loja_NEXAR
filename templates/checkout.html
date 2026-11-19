@@ -30,10 +30,19 @@
     <input type="hidden" name="token_pedido" value="{{ token_pedido }}">
 
     <div class="checkout-campos">
+      {% if not user.is_authenticated %}
+        <div class="visitante-aviso">
+          <p><b>Comprando sem conta.</b> Você recebe um link para acompanhar o pedido. Não precisa de senha.</p>
+          <a class="btn-sm" href="{% url 'loja:entrar' %}?next={% url 'loja:checkout' %}">Já tenho conta: entrar</a>
+        </div>
+      {% endif %}
       <fieldset class="bloco">
         <legend><span class="bloco-num">1</span>Seus dados</legend>
         <div class="bloco-campos">
           {% include "_campo.html" with campo=form.nome auto="name" classe="largo" %}
+          {% if not user.is_authenticated %}
+            {% include "_campo.html" with campo=form.email tipo="email" auto="email" classe="largo" dica="voce@exemplo.com" %}
+          {% endif %}
           {% include "_campo.html" with campo=form.cpf auto="off" modo="numeric" mascara="cpf" dica="000.000.000-00" %}
           {% include "_campo.html" with campo=form.telefone tipo="tel" auto="tel-national" modo="tel" mascara="telefone" dica="(11) 91234-5678" %}
         </div>

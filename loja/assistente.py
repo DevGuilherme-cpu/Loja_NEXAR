@@ -113,7 +113,7 @@ def responder(pergunta):
     if re.search(r"client|comprador|quem compr", t):
         por_cliente = defaultdict(Decimal)
         for p in pedidos:
-            por_cliente[p.usuario.get_username()] += valor(p)
+            por_cliente[p.cliente] += valor(p)
         nome, v = max(por_cliente.items(), key=lambda i: i[1])
         return (f"O cliente que mais comprou {quando} foi {nome}, com {reais(v)}. "
                 f"Clientes com pedido {quando}: {len(por_cliente)}.")
@@ -121,7 +121,7 @@ def responder(pergunta):
     if "pedido" in t:
         ultimo = max(pedidos, key=lambda p: p.data)
         return (f"Foram {plural(soma['pedidos'], 'pedido')} {quando}. O último foi o #{ultimo.id}, "
-                f"de {ultimo.usuario.get_username()}: {ultimo.quantidade}× {ultimo.produto.nome}.")
+                f"de {ultimo.cliente}: {ultimo.quantidade}× {ultimo.produto.nome}.")
 
     if re.search(r"fatur|vend|receit|ganh|dinheiro|quanto|lucr", t):
         return (f"Você faturou {reais(soma['faturamento'])} {quando}, em {plural(soma['pedidos'], 'pedido')} "

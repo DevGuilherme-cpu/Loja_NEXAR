@@ -18,6 +18,16 @@
 
   <div class="checkout-grade">
     <div class="checkout-campos">
+      {% if link %}
+        <section class="visitante-aviso link-pedido" aria-labelledby="link-titulo">
+          <p id="link-titulo"><b>Guarde este link</b> para acompanhar o pedido{% if pedido.entrega_email %} ({{ pedido.entrega_email }}){% endif %}. Quem tiver o link vê o pedido, então não compartilhe.</p>
+          <div class="link-pedido-linha">
+            <label class="sr" for="link-pedido">Link do pedido</label>
+            <input id="link-pedido" type="text" value="{{ link }}" readonly>
+            <button type="button" class="btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('link-pedido').value).then(() => { this.textContent = 'Copiado' })">Copiar link</button>
+          </div>
+        </section>
+      {% endif %}
       <section class="bloco rastreio" id="rastreio" aria-labelledby="rastreio-titulo">
         <h2 id="rastreio-titulo"><span class="bloco-num">1</span>Acompanhe a entrega</h2>
         <p class="rastreio-status" id="rastreio-status" role="status" aria-live="polite">
@@ -67,7 +77,8 @@
         <div><dt>Frete</dt><dd>{% if pedido.frete %}R$ {{ pedido.frete|floatformat:2 }}{% else %}Grátis{% endif %}</dd></div>
         <div class="resumo-total"><dt>Total</dt><dd>R$ {{ pedido.total_com_frete|floatformat:2 }}</dd></div>
       </dl>
-      <a class="btn btn-neon" href="{% url 'loja:conta' %}">Ver meus pedidos</a>
+      {% if pedido.usuario_id %}<a class="btn btn-neon" href="{% url 'loja:conta' %}">Ver meus pedidos</a>
+      {% else %}<a class="btn btn-neon" href="{% url 'loja:cadastro' %}">Criar conta para as próximas compras</a>{% endif %}
       <a class="link resumo-voltar" href="{% url 'loja:produtos' %}">Continuar comprando</a>
     </aside>
   </div>

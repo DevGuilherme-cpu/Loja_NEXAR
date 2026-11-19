@@ -86,7 +86,7 @@ def entregas(pedidos):
             # pedido do checkout: o ponto do mapa é a capital do estado; o nome é a cidade de verdade
             _, uf, lon, lat = por_uf[p.entrega_uf]
             cidade = p.entrega_cidade
-        lista.append({"id": p.id, "cliente": p.usuario.get_username(),
+        lista.append({"id": p.id, "cliente": p.cliente,
                       "produto": f"{p.quantidade}× {p.produto.nome}", "total": reais(valor(p)),
                       "cidade": cidade, "uf": uf, "lon": lon, "lat": lat})
     return lista
