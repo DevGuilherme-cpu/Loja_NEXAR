@@ -18,10 +18,10 @@
   </script>
   <script src="{% static 'js/acessibilidade.js' %}"></script>
 </head>
-<body>
+<body class="loja">
   <a class="pular" href="#conteudo">Pular para o conteúdo</a>
 
-  <p class="aviso-frete">Frete grátis em compras acima de R$ 300</p>
+  <p class="aviso-frete"><b>Drop 01 no ar:</b> frete grátis em compras acima de R$ 300</p>
 
   <header class="topo">
     <a class="marca" href="{% url 'loja:index' %}" aria-label="NEXAR, página inicial">NEXAR</a>
@@ -59,6 +59,19 @@
   {% endif %}
 
   <main id="conteudo">{% block conteudo %}{% endblock %}</main>
+
+  <section class="garantias-faixa" aria-label="Por que comprar na NEXAR">
+    <ul>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z"/></svg>
+        <b>Edições limitadas</b><span>Drops com poucas peças.</span></li>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2 6h11v9H2zM13 9h4l3 3v3h-7zM6 18.5a1.5 1.5 0 1 0 0-.01M17 18.5a1.5 1.5 0 1 0 0-.01"/></svg>
+        <b>Frete rápido</b><span>Grátis acima de R$ 300.</span></li>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></svg>
+        <b>Trocas fáceis</b><span>Troca grátis em 30 dias.</span></li>
+      <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <b>Compra segura</b><span>Seus dados protegidos.</span></li>
+    </ul>
+  </section>
 
   <footer class="rodape">
     <p class="rodape-marca">NEXAR</p>

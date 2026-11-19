@@ -3025,6 +3025,8 @@ html.a11y-links a {
   *::after {
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
+    /* animações infinitas (selo girando, halo do mapa) param em vez de piscar */
+    animation-iteration-count: 1 !important;
   }
 
   @view-transition {
@@ -3111,4 +3113,702 @@ html.a11y-links a {
   border: 0;
   background: none;
   cursor: pointer;
+}
+
+/* =====================================================================
+   Loja no estilo "drop" (referência PULSE): preto, branco e neon,
+   títulos estreitos em maiúsculas. Só vale nas páginas da loja
+   (body.loja em templates/base.html); o painel não muda.
+   ===================================================================== */
+
+.loja .aviso-frete {
+  background: var(--tinta);
+  color: var(--neon);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.loja .aviso-frete b {
+  color: var(--papel);
+}
+
+.loja .topo {
+  background: var(--tinta);
+  color: var(--papel);
+  backdrop-filter: none;
+}
+
+.loja .marca {
+  font-stretch: 62%;
+  font-size: 2.1rem;
+  letter-spacing: .01em;
+}
+
+.loja .menu a,
+.loja .topo-acoes>a,
+.loja .topo-sair button {
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.loja .menu a::after,
+.loja .topo-acoes a::after {
+  background: var(--neon);
+}
+
+.loja .topo-usuario {
+  color: var(--palco-escuro);
+}
+
+.loja .topo-sair button:hover {
+  color: var(--neon);
+}
+
+.loja .topo-busca input {
+  background: rgba(255, 255, 255, .12);
+  color: var(--papel);
+}
+
+.loja .topo-busca input::placeholder {
+  color: var(--palco-escuro);
+}
+
+.loja .topo-busca input:focus {
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.loja .a11y-botao {
+  background: var(--neon);
+  color: var(--tinta);
+}
+
+.loja .a11y-botao:hover,
+.loja .a11y-botao[aria-expanded="true"] {
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.loja .a11y-menu {
+  color: var(--tinta);
+}
+
+/* títulos */
+.loja .secao-titulo,
+.loja .pdp-info h1,
+.loja .hero h1 {
+  font-stretch: 62%;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: .88;
+  text-transform: uppercase;
+}
+
+.loja .secao-titulo {
+  font-size: clamp(2.8rem, 6.5vw, 5.5rem);
+}
+
+.loja .pdp-info h1 {
+  font-size: clamp(3rem, 6vw, 5.5rem);
+}
+
+/* botões e escolhas */
+.loja .btn:hover {
+  background: var(--neon);
+  color: var(--tinta);
+}
+
+.loja .btn-neon:hover {
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.loja .chip.ativo {
+  background: var(--tinta);
+  color: var(--neon);
+}
+
+.loja .tamanhos input:checked+span {
+  background: var(--tinta);
+  color: var(--neon);
+}
+
+/* cards */
+.loja .card-tag {
+  border-radius: 0;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.loja .card-tag-hot {
+  background: var(--neon);
+  color: var(--tinta);
+}
+
+.loja .card-info span:first-child {
+  font-size: .92rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.loja .card:hover .card-info span:first-child {
+  color: var(--tinta);
+  text-decoration: underline 3px var(--neon);
+  text-underline-offset: .25em;
+}
+
+/* hero: texto no preto à esquerda, peças 3D no palco à direita */
+.loja .hero {
+  margin: 0;
+  height: min(88svh, 820px);
+  border-radius: 0;
+  background: linear-gradient(90deg, var(--tinta) 0 44%, var(--palco) 44%);
+}
+
+.loja .hero-texto {
+  top: 0;
+  bottom: 0;
+  left: var(--margem);
+  right: auto;
+  width: min(40%, 36rem);
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.1rem;
+  color: var(--papel);
+}
+
+.loja .hero h1 {
+  max-width: none;
+  font-size: clamp(3.6rem, 8.5vw, 9.5rem);
+}
+
+.hero-texto .drop-selo,
+.hero-alta {
+  pointer-events: auto;
+}
+
+.hero-sub {
+  max-width: 24rem;
+  color: var(--palco-escuro);
+  font-size: var(--t1);
+}
+
+.hero-alta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1rem;
+  color: var(--palco-escuro);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.hero-alta b {
+  color: var(--neon);
+}
+
+.hero-alta a:hover {
+  color: var(--neon);
+}
+
+.hero-mira {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.hero-mira::before,
+.hero-mira::after {
+  content: "";
+  position: absolute;
+  background: var(--tinta);
+}
+
+.hero-mira::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+}
+
+.hero-mira::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+}
+
+.hero-mira-1 {
+  right: 3%;
+  top: 8%;
+}
+
+.hero-mira-2 {
+  right: 3%;
+  bottom: 8%;
+}
+
+.hero-giro {
+  position: absolute;
+  right: 9%;
+  bottom: 14%;
+  width: clamp(90px, 9vw, 130px);
+  pointer-events: none;
+  animation: girar 20s linear infinite;
+}
+
+.hero-giro text {
+  fill: var(--tinta);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.hero-giro circle {
+  fill: var(--tinta);
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* faixa do drop: contagem + destaque neon */
+.drop-faixa {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(0, 2.6fr);
+  gap: 1.25rem;
+  padding: 1.5rem var(--margem) 0;
+}
+
+.contagem {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .8rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--r);
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.contagem p {
+  color: var(--neon);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.contagem ol {
+  list-style: none;
+  display: flex;
+  gap: 1.1rem;
+}
+
+.contagem b {
+  display: block;
+  color: var(--neon);
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.contagem span {
+  color: var(--palco-escuro);
+  font-size: .7rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.drop-banner {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  border-radius: var(--r);
+  background: var(--neon);
+  color: var(--tinta);
+}
+
+.drop-banner img {
+  width: 110px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--r-pequeno);
+}
+
+.drop-banner h2 {
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: clamp(1.8rem, 3.2vw, 2.8rem);
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+.drop-banner p {
+  max-width: 34rem;
+  margin-top: .35rem;
+  font-size: .9rem;
+}
+
+.drop-banner-acao {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  min-width: 170px;
+}
+
+.drop-banner .btn {
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.drop-banner:hover .btn {
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.drop-restam {
+  font-size: .75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.drop-barra {
+  height: 4px;
+  background: rgba(0, 0, 0, .15);
+}
+
+.drop-barra span {
+  display: block;
+  width: min(var(--pct), 100%);
+  height: 100%;
+  background: var(--tinta);
+}
+
+/* coleções (categorias com foto) */
+.colecoes {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.colecoes-rotulo {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.colecoes-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .9rem;
+}
+
+.colecao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  aspect-ratio: 3 / 4;
+  padding: 1rem;
+  overflow: hidden;
+  border-radius: var(--r-pequeno);
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.colecao img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .6s var(--ease);
+}
+
+/* escurece só a base da foto, para o nome ficar legível */
+.colecao::after {
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .78));
+}
+
+.colecao-nome,
+.colecao-ver {
+  position: relative;
+  z-index: 1;
+}
+
+.colecao-nome {
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 2.2vw, 2rem);
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+.colecao-ver {
+  align-self: flex-start;
+  margin-top: .5rem;
+  padding: .3rem .6rem;
+  background: var(--neon);
+  color: var(--tinta);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.colecao:hover img {
+  transform: scale(1.06);
+}
+
+/* #NexarFit (fotos vestindo) */
+.looks {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--palco);
+}
+
+.looks-texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.looks-texto p {
+  color: var(--nevoa);
+}
+
+.loja .looks .secao-titulo {
+  font-size: clamp(2.4rem, 4.2vw, 4rem);
+}
+
+.looks-grade {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.look {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--r-pequeno);
+}
+
+.look img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .6s var(--ease);
+}
+
+.look span {
+  position: absolute;
+  left: .5rem;
+  bottom: .5rem;
+  right: .5rem;
+  padding: .25rem .5rem;
+  background: var(--tinta);
+  color: var(--papel);
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.look:hover img {
+  transform: scale(1.06);
+}
+
+/* página Loja: título numa faixa preta */
+.pagina-loja .section-head {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border-radius: var(--r);
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.pagina-loja .contador {
+  color: var(--neon);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* faixa de garantias e rodapé */
+.garantias-faixa {
+  margin-top: 4rem;
+  padding: 1.5rem var(--margem);
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.garantias-faixa ul {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.garantias-faixa li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  column-gap: .8rem;
+  align-items: center;
+}
+
+.garantias-faixa svg {
+  grid-row: span 2;
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.garantias-faixa b {
+  font-size: .85rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.garantias-faixa span {
+  color: var(--palco-escuro);
+  font-size: .8rem;
+}
+
+.loja .rodape {
+  margin-top: 0;
+  background: var(--palco);
+  color: var(--tinta);
+}
+
+.loja .rodape-marca {
+  font-stretch: 62%;
+}
+
+.loja .rodape h2 {
+  font-size: .85rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.loja .rodape a {
+  color: var(--nevoa);
+}
+
+.loja .rodape a:hover {
+  color: var(--tinta);
+}
+
+.loja .rodape-creditos {
+  color: var(--nevoa);
+}
+
+/* telas médias: hero vira palco em cima e preto embaixo */
+@media (max-width: 1100px) {
+  .loja .hero {
+    background: linear-gradient(180deg, var(--palco) 0 50%, var(--tinta) 50%);
+  }
+
+  .loja .hero-texto {
+    top: auto;
+    right: var(--margem);
+    bottom: clamp(1.25rem, 4vw, 2.5rem);
+    width: auto;
+  }
+
+  .loja .hero h1 {
+    font-size: clamp(3rem, 11vw, 6rem);
+  }
+
+  .hero-giro {
+    top: 6%;
+    bottom: auto;
+    right: 5%;
+  }
+
+  .drop-faixa,
+  .looks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  /* no celular as peças ficam em 2x2 em cima: o palco vai até 60% e o texto fica no preto */
+  .loja .hero {
+    background: linear-gradient(180deg, var(--palco) 0 60%, var(--tinta) 60%);
+  }
+
+  .hero-sub,
+  .hero-mira,
+  .hero-giro {
+    display: none;
+  }
+
+  .drop-banner {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .drop-banner img {
+    width: 72px;
+  }
+
+  .drop-banner-acao {
+    grid-column: 1 / -1;
+  }
+
+  .colecoes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .colecoes-rotulo {
+    writing-mode: horizontal-tb;
+    transform: none;
+    text-align: left;
+  }
+
+  .colecoes-grade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .looks-grade {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .garantias-faixa ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loja .marca {
+    font-size: 1.8rem;
+  }
 }

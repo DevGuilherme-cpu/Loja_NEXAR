@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import wraps
 
 from django.conf import settings
@@ -34,8 +34,19 @@ def filtrar(busca, categoria=""):
     return lista.filter(categoria_id=categoria) if categoria.isdigit() else lista
 
 
+# fim do drop da home (data fixa: a contagem é de verdade, não reinicia a cada visita)
+FIM_DROP = datetime(2026, 11, 30, 23, 59, 59)
+
+
 def index(request):
-    return render(request, "index.html", {"destaques": PRODUTOS[:4]})
+    fim = timezone.make_aware(FIM_DROP)
+    return render(request, "index.html", {
+        "destaques": PRODUTOS[:4],
+        # peça em destaque do drop: a com menos unidades (o "restam X" vem do estoque real)
+        "drop": PRODUTOS.filter(estoque__gt=0).order_by("estoque", "id").first() if timezone.now() < fim else None,
+        "fim_drop": fim,
+        "looks": PRODUTOS.exclude(imagem_2="")[:5],
+    })
 
 
 def produtos(request):
