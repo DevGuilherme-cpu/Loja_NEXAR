@@ -12,6 +12,8 @@ urlpatterns = [
     path("entrar/", views.Entrar.as_view(), name="entrar"),
     path("cadastro/", views.cadastro, name="cadastro"),
     path("sair/", views.Sair.as_view(), name="sair"),
+    path("conta/", views.conta, name="conta"),
+    path("conta/encerrar/", views.conta_encerrar, name="conta_encerrar"),
 
     # painel admin
     path("painel/", views.painel_inicio, name="painel_inicio"),

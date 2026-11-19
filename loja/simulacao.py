@@ -37,7 +37,7 @@ def simular_pedidos(quantidade=6, dias=14):
         if not Produto.objects.filter(id=produto.id, estoque__gte=qtd).update(estoque=F("estoque") - qtd):
             continue
         pedido = Pedido.objects.create(usuario=cliente_ficticio(random.choice(CLIENTES)), produto=produto,
-                                       tamanho=random.choice(["P", "M", "M", "G", "G", "GG"]),
+                                       tamanho=random.choice(produto.tamanhos),
                                        quantidade=qtd, preco_unitario=produto.preco)
         if i:
             data = agora - timedelta(days=random.randint(0, dias - 1), hours=random.randint(0, 23),

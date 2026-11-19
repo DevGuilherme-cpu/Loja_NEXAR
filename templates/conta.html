@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block titulo %}Minha conta — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="conta">
+  <div class="painel-topo">
+    <div>
+      <h1>Minha conta</h1>
+      <p class="contador">{{ user.get_username }}{% if user.email %}, {{ user.email }}{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="conta-grade">
+    <section class="cartao">
+      <h2>Meus pedidos</h2>
+      <ul class="lista-painel">
+        {% for p in pedidos %}
+          <li>
+            <span><b>#{{ p.id }}</b> {{ p.data|date:"d/m/Y" }}: {{ p.quantidade }}× <a href="{% url 'loja:produto' p.produto_id %}">{{ p.produto.nome }}</a> ({{ p.get_tamanho_display }})</span>
+            <span class="lista-valor">R$ {{ p.total|floatformat:2 }}</span>
+          </li>
+        {% empty %}
+          <li class="vazio">Você ainda não fez nenhum pedido. <a class="link" href="{% url 'loja:produtos' %}">Ver as peças</a></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="cartao conta-encerrar" aria-labelledby="encerrar-titulo">
+      <h2 id="encerrar-titulo">Encerrar minha conta</h2>
+      <p>Você pode encerrar a conta aqui mesmo, sem ligar nem mandar e-mail. Criar e sair têm que ser igualmente fáceis.</p>
+      <ul>
+        <li>Seu nome de usuário, e-mail e senha são apagados.</li>
+        <li>Se você já comprou, o pedido continua guardado sem os seus dados, porque é o registro da venda.</li>
+        <li>Não dá para desfazer: para voltar, crie uma conta nova.</li>
+      </ul>
+      {% if user.is_staff %}
+        <p class="contador">Contas da equipe são encerradas pelo administrador da loja.</p>
+      {% else %}
+        <button type="button" class="btn btn-perigo" data-abre="confirmar-encerrar">Encerrar conta</button>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if not user.is_staff %}
+  <dialog class="guia" id="confirmar-encerrar" aria-labelledby="confirmar-titulo">
+    <form method="post" action="{% url 'loja:conta_encerrar' %}">
+      {% csrf_token %}
+      <h2 id="confirmar-titulo">Encerrar a conta {{ user.get_username }}?</h2>
+      <p>Para confirmar que é você, digite sua senha.</p>
+      <label class="campo">Senha
+        <input type="password" name="senha" autocomplete="current-password" required>
+      </label>
+      <div class="acoes">
+        <button type="button" class="btn btn-claro" data-fecha>Manter minha conta</button>
+        <button type="submit" class="btn btn-perigo">Encerrar definitivamente</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
+</section>
+{% endblock %}

@@ -51,13 +51,20 @@
       <input type="hidden" name="produto_id" value="{{ produto.id }}">
       <input type="hidden" name="personalizacao" value="">
 
-      <fieldset class="tamanhos">
-        <legend>Tamanho</legend>
-        <label><input type="radio" name="tamanho" value="P" required><span>P</span></label>
-        <label><input type="radio" name="tamanho" value="M"><span>M</span></label>
-        <label><input type="radio" name="tamanho" value="G"><span>G</span></label>
-        <label><input type="radio" name="tamanho" value="GG"><span>GG</span></label>
-      </fieldset>
+      {% with grade=produto.grade %}
+      {% if grade == "unico" %}
+        <input type="hidden" name="tamanho" value="U">
+        <p class="tamanho-unico"><b>Tamanho único</b>{% if "Bon" in produto.categoria.nome %}, com regulagem atrás{% endif %}.</p>
+      {% else %}
+        <fieldset class="tamanhos">
+          <legend>Tamanho {% if grade == "tenis" %}(numeração brasileira){% endif %}</legend>
+          {% for t in produto.tamanhos %}
+            <label><input type="radio" name="tamanho" value="{{ t }}"{% if forloop.first %} required{% endif %}><span>{{ t }}</span></label>
+          {% endfor %}
+        </fieldset>
+        <button type="button" class="link guia-abrir" data-abre="guia-medidas">Guia de medidas</button>
+      {% endif %}
+      {% endwith %}
       <label class="qtd">Quantidade
         <input type="number" name="quantidade" value="1" min="1" max="{% if produto.estoque < 10 %}{{ produto.estoque }}{% else %}10{% endif %}">
       </label>
@@ -68,6 +75,58 @@
         <button class="btn" type="submit" disabled>Esgotado</button>
       {% endif %}
     </form>
+
+    <ul class="pdp-garantias">
+      <li><b>Frete grátis</b> em compras acima de R$ 300. Abaixo disso, R$ 19,90 para todo o Brasil, com entrega em 3 a 8 dias úteis.</li>
+      <li><b>Troca grátis em até 30 dias</b>, com a peça sem uso e com etiqueta.</li>
+      <li><b>Arrependimento:</b> você pode devolver em até 7 dias depois de receber e recebe o valor de volta (Código de Defesa do Consumidor, art. 49).</li>
+    </ul>
+
+    {% if produto.grade != "unico" %}
+    <dialog class="guia" id="guia-medidas" aria-labelledby="guia-titulo">
+      <div class="guia-topo">
+        <h2 id="guia-titulo">Guia de medidas</h2>
+        <button type="button" class="btn-sm" data-fecha>Fechar</button>
+      </div>
+      {% if produto.grade == "tenis" %}
+        <p>Meça o pé do calcanhar até a ponta do dedo maior, em pé, no fim do dia.</p>
+        <table class="tabela">
+          <thead><tr><th>Tamanho</th><th class="num">Comprimento do pé</th></tr></thead>
+          <tbody>
+            <tr><td>38</td><td class="num">24,5 cm</td></tr><tr><td>39</td><td class="num">25,2 cm</td></tr>
+            <tr><td>40</td><td class="num">25,9 cm</td></tr><tr><td>41</td><td class="num">26,6 cm</td></tr>
+            <tr><td>42</td><td class="num">27,3 cm</td></tr><tr><td>43</td><td class="num">28,0 cm</td></tr>
+            <tr><td>44</td><td class="num">28,7 cm</td></tr>
+          </tbody>
+        </table>
+        <p>Entre dois tamanhos? Escolha o maior.</p>
+      {% elif produto.grade == "calca" %}
+        <p>Medidas da peça em centímetros, com ela deitada e sem esticar.</p>
+        <table class="tabela">
+          <thead><tr><th>Tamanho</th><th class="num">Cintura</th><th class="num">Quadril</th><th class="num">Comprimento</th></tr></thead>
+          <tbody>
+            <tr><td>P</td><td class="num">76</td><td class="num">100</td><td class="num">102</td></tr>
+            <tr><td>M</td><td class="num">80</td><td class="num">104</td><td class="num">104</td></tr>
+            <tr><td>G</td><td class="num">86</td><td class="num">110</td><td class="num">106</td></tr>
+            <tr><td>GG</td><td class="num">92</td><td class="num">116</td><td class="num">108</td></tr>
+          </tbody>
+        </table>
+        <p>Modelagem wide: se estiver entre dois tamanhos, escolha pela cintura.</p>
+      {% else %}
+        <p>Medidas da peça em centímetros, com ela deitada e sem esticar. Peito medido de axila a axila, vezes dois.</p>
+        <table class="tabela">
+          <thead><tr><th>Tamanho</th><th class="num">Peito</th><th class="num">Comprimento</th><th class="num">Ombro</th></tr></thead>
+          <tbody>
+            <tr><td>P</td><td class="num">108</td><td class="num">70</td><td class="num">54</td></tr>
+            <tr><td>M</td><td class="num">114</td><td class="num">72</td><td class="num">56</td></tr>
+            <tr><td>G</td><td class="num">120</td><td class="num">74</td><td class="num">58</td></tr>
+            <tr><td>GG</td><td class="num">126</td><td class="num">76</td><td class="num">60</td></tr>
+          </tbody>
+        </table>
+        <p>Modelagem oversized: para um caimento mais justo, escolha um tamanho abaixo do seu.</p>
+      {% endif %}
+    </dialog>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

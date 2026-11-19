@@ -130,8 +130,9 @@ textarea {
   top: 0;
   z-index: 50;
   display: flex;
+  flex-wrap: wrap;  /* com a fonte aumentada pelo menu de acessibilidade, o topo quebra em vez de cortar */
   align-items: center;
-  gap: 2rem;
+  gap: .75rem 2rem;
   padding: .9rem var(--margem);
   background: rgba(255, 255, 255, .88);
   backdrop-filter: blur(14px);
@@ -765,6 +766,217 @@ img[data-thumb]:not([src]) {
 .pdp-estoque {
   color: var(--eixo-x);
   font-weight: 600;
+}
+
+.tamanho-unico {
+  color: var(--nevoa);
+}
+
+.tamanho-unico b {
+  color: var(--tinta);
+}
+
+.guia-abrir {
+  align-self: flex-start;
+  margin-top: -.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.pdp-garantias {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--r);
+  background: var(--palco);
+  font-size: .9rem;
+  color: var(--nevoa);
+}
+
+.pdp-garantias b {
+  color: var(--tinta);
+}
+
+/* janelas (guia de medidas, confirmar encerrar conta) */
+.guia {
+  width: min(560px, calc(100% - 2rem));
+  margin: auto;
+  padding: 1.5rem;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.guia::backdrop {
+  background: rgba(0, 0, 0, .45);
+}
+
+.guia[open] {
+  animation: chegar .3s var(--ease);
+}
+
+.guia>*+*,
+.guia form>*+* {
+  margin-top: 1rem;
+}
+
+.guia h2 {
+  font-size: var(--t1);
+  font-weight: 700;
+}
+
+.guia p {
+  color: var(--nevoa);
+}
+
+.guia-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.guia .btn-sm,
+.guia .btn-claro {
+  background: var(--palco);
+}
+
+.btn-perigo {
+  background: var(--eixo-x);
+}
+
+.btn-perigo:hover {
+  background: var(--tinta);
+}
+
+/* minha conta */
+.conta {
+  padding: 1.75rem var(--margem) 2rem;
+}
+
+.conta-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.conta-encerrar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .9rem;
+}
+
+.conta-encerrar ul {
+  padding-left: 1.1rem;
+  color: var(--nevoa);
+  font-size: .9rem;
+}
+
+.guia .acoes {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* acessibilidade */
+.a11y {
+  position: relative;
+}
+
+.a11y-botao {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  min-height: 44px;
+  padding: 0 .9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tinta);
+  color: var(--papel);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.a11y-botao:hover,
+.a11y-botao[aria-expanded="true"] {
+  background: var(--eixo-z);
+}
+
+.a11y-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + .5rem);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  padding: .5rem;
+  border-top: 4px solid var(--eixo-z);
+  border-radius: var(--r);
+  background: var(--papel);
+  box-shadow: 0 0 0 1px var(--linha), 0 16px 40px rgba(0, 0, 0, .18);
+  animation: chegar .25s var(--ease);
+}
+
+.a11y-menu button {
+  min-height: 44px;
+  padding: .55rem .9rem;
+  border: 0;
+  border-radius: var(--r-pequeno);
+  background: none;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.a11y-menu button:hover {
+  background: var(--palco);
+}
+
+.a11y-menu button[aria-pressed="true"] {
+  background: var(--eixo-z);
+  color: var(--papel);
+}
+
+.a11y-menu button[aria-pressed="true"]::after {
+  content: " (ligado)";
+  font-weight: 400;
+}
+
+/* efeitos do menu (classes no <html>, ligadas por static/js/acessibilidade.js) */
+html.a11y-pb {
+  filter: grayscale(1);
+}
+
+html.a11y-inverter {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+html.a11y-pb.a11y-inverter {
+  filter: grayscale(1) invert(1);
+}
+
+/* fotos e 3D voltam ao normal dentro da página invertida */
+html.a11y-inverter img,
+html.a11y-inverter video,
+html.a11y-inverter canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+html.a11y-links a {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: .2em;
+  outline: 2px solid var(--eixo-z);
+  outline-offset: 2px;
 }
 
 /* login e cadastro */
@@ -2082,6 +2294,25 @@ img[data-thumb]:not([src]) {
 
   .topo-busca input {
     width: 7rem;
+  }
+
+  /* no celular o botão de acessibilidade fica só com o ícone (o nome continua para leitor de tela) */
+  .a11y-rotulo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .a11y-botao {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .conta-grade {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .topo-busca input:focus {

@@ -96,7 +96,7 @@ def responder(pergunta):
         contagem = Counter()
         for p in pedidos:
             contagem[p.tamanho] += p.quantidade
-        linhas = [f"• {nome}: {plural(contagem[nome], 'peça')}" for nome, _ in Pedido.TAMANHOS]
+        linhas = [f"• {rotulo}: {plural(contagem[nome], 'peça')}" for nome, rotulo in Pedido.TAMANHOS if contagem[nome]]
         return f"O tamanho mais pedido {quando} é {contagem.most_common(1)[0][0]}.\n" + "\n".join(linhas)
 
     if re.search(r"mais vend|top|campe|melhor|sucesso|ranking", t):
