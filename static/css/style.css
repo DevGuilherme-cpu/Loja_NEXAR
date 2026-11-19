@@ -132,7 +132,8 @@ textarea {
   top: 0;
   z-index: 50;
   display: flex;
-  flex-wrap: wrap;  /* com a fonte aumentada pelo menu de acessibilidade, o topo quebra em vez de cortar */
+  flex-wrap: wrap;
+  /* com a fonte aumentada pelo menu de acessibilidade, o topo quebra em vez de cortar */
   align-items: center;
   gap: .75rem 2rem;
   padding: .9rem var(--margem);
@@ -194,8 +195,19 @@ textarea {
 
 
 /* Botão Sair (form POST) com a mesma aparência dos links do topo */
-.topo-sair button { padding: .2rem 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
-.topo-sair button:hover { color: var(--eixo-z); }
+.topo-sair button {
+  padding: .2rem 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.topo-sair button:hover {
+  color: var(--eixo-z);
+}
+
 .topo-busca input {
   width: 9rem;
   padding: .45rem .9rem;
@@ -1130,11 +1142,30 @@ html.a11y-links a {
   transition: background-size .3s var(--ease);
 }
 
-.forca-senha[data-nivel="0"] { --pct-forca: 20%; --cor-forca: var(--eixo-x); }
-.forca-senha[data-nivel="1"] { --pct-forca: 40%; --cor-forca: var(--eixo-x); }
-.forca-senha[data-nivel="2"] { --pct-forca: 60%; --cor-forca: var(--nevoa); }
-.forca-senha[data-nivel="3"] { --pct-forca: 80%; --cor-forca: var(--eixo-y); }
-.forca-senha[data-nivel="4"] { --pct-forca: 100%; --cor-forca: var(--eixo-y); }
+.forca-senha[data-nivel="0"] {
+  --pct-forca: 20%;
+  --cor-forca: var(--eixo-x);
+}
+
+.forca-senha[data-nivel="1"] {
+  --pct-forca: 40%;
+  --cor-forca: var(--eixo-x);
+}
+
+.forca-senha[data-nivel="2"] {
+  --pct-forca: 60%;
+  --cor-forca: var(--nevoa);
+}
+
+.forca-senha[data-nivel="3"] {
+  --pct-forca: 80%;
+  --cor-forca: var(--eixo-y);
+}
+
+.forca-senha[data-nivel="4"] {
+  --pct-forca: 100%;
+  --cor-forca: var(--eixo-y);
+}
 
 /* telas "drop": cadastro, login, checkout e pedido confirmado (preto, branco e neon) */
 .drop-selo {
@@ -2864,9 +2895,31 @@ html.a11y-links a {
   navigation: auto;
 }
 
-::view-transition-old(root),
+/* a página antiga recua e some; a nova sobe. O topo fica parado (tem nome próprio) */
+::view-transition-old(root) {
+  animation: .3s cubic-bezier(.2, .8, .2, 1) both pagina-sai;
+}
+
 ::view-transition-new(root) {
-  animation-duration: .35s;
+  animation: .5s cubic-bezier(.2, .8, .2, 1) both pagina-entra;
+}
+
+@keyframes pagina-sai {
+  to {
+    opacity: 0;
+    transform: scale(.98);
+  }
+}
+
+@keyframes pagina-entra {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+
+.loja .topo {
+  view-transition-name: topo;
 }
 
 ::view-transition-group(*) {
@@ -3806,6 +3859,7 @@ html.a11y-links a {
 }
 
 @media (max-width: 760px) {
+
   /* no celular as peças ficam em 2x2 em cima: o palco vai até 60% e o texto fica no preto */
   .loja .hero {
     background: linear-gradient(180deg, var(--palco) 0 60%, var(--tinta) 60%);
@@ -3986,5 +4040,82 @@ html.a11y-links a {
   .loja .card-img:has(.card-tag-hot) .card-tag-hot {
     left: .5rem;
     right: auto;
+  }
+}
+
+/* movimento (main.js e home.js). O bloco de reduced motion zera tudo isso */
+
+/* ímã dos botões neon: o JS muda --mx/--my; translate não briga com o transform do clique */
+.btn-neon {
+  --mx: 0;
+  --my: 0;
+  translate: calc(var(--mx) * 1px) calc(var(--my) * 1px);
+}
+
+/* brilho que segue o mouse no card (as posições vêm do tilt) */
+.loja .card-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgb(255 255 255 / .35), transparent 45%);
+  opacity: 0;
+  transition: opacity .3s var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .loja .card:hover .card-img::after {
+    opacity: 1;
+  }
+}
+
+/* contagem do drop: o número novo cai no lugar */
+.contagem b.rola {
+  animation: rolar .45s var(--ease);
+}
+
+@keyframes rolar {
+  from {
+    opacity: 0;
+    transform: translateY(-.4em);
+  }
+}
+
+/* campo com erro treme uma vez ao voltar do servidor */
+.com-erro :is(input, select) {
+  animation: tremer .45s var(--ease);
+}
+
+@keyframes tremer {
+  20% { translate: -6px; }
+  40% { translate: 5px; }
+  60% { translate: -3px; }
+  80% { translate: 2px; }
+}
+
+/* check desenhado no pedido confirmado */
+.sucesso-check {
+  width: 3.5rem;
+  height: 3.5rem;
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sucesso-check :is(circle, path) {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tracar .5s var(--ease) .25s forwards;
+}
+
+.sucesso-check path {
+  animation-delay: .6s;
+}
+
+@keyframes tracar {
+  to {
+    stroke-dashoffset: 0;
   }
 }

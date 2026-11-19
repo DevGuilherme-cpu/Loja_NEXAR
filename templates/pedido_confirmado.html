@@ -6,6 +6,10 @@
 {% block conteudo %}
 <section class="drop confirmado">
   <header class="drop-topo">
+    <svg class="sucesso-check" viewBox="0 0 52 52" aria-hidden="true">
+      <circle cx="26" cy="26" r="23" pathLength="1"></circle>
+      <path d="M15 27l7 7 15-16" pathLength="1"></path>
+    </svg>
     <span class="drop-selo">Pedido #{{ pedido.id }}</span>
     <h1 class="drop-titulo">Pedido confirmado.</h1>
     <p class="drop-sub">Valeu, {{ pedido.entrega_nome|default:user.get_username }}. Previsão de entrega entre {{ chega_de|date:"d/m" }} e {{ chega_ate|date:"d/m" }}.</p>

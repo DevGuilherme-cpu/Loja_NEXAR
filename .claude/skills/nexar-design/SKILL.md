@@ -50,8 +50,13 @@ as peças aparecem sobre o **palco cinza** de software 3D.
 
 1. **O hero anima sozinho** (peças caem e inflam, selo girando). Mapas e rastreio também se mexem
    sozinhos porque mostram algo acontecendo (entregas).
-2. O resto **responde a uma ação**: hover, clique, escolha de tamanho/cor, troca de página.
-3. Troca de página = View Transitions do navegador. Não reintroduzir cortina.
+2. O resto **responde a uma ação**: hover, clique, escolha de tamanho/cor, troca de página, ou
+   **entrar na tela ao rolar** (uma vez só). O que já aparece ao abrir a página não anima (exceto títulos).
+   Prontos em `main.js`: títulos `.secao-titulo`/`.drop-titulo` sobem letra a letra; cards, coleções e
+   looks entram do desfoque; `.btn-neon` tem ímã; `.card-img` tem brilho que segue o mouse.
+   No CSS: `.contagem b.rola` (número que muda), `.com-erro` treme, `.sucesso-check` se desenha.
+3. Troca de página = View Transitions do navegador (a página nova sobe; o `.topo` fica parado e o
+   card vira o palco do produto pelo `view-transition-name: produto-<id>`). Não reintroduzir cortina.
 4. Easing padrão `--ease` (`cubic-bezier(.2,.8,.2,1)`); durações 0.25–0.7 s.
 5. Sempre respeitar `prefers-reduced-motion` (o CSS zera transições e para as animações infinitas;
    o JS checa `anima`). O nível de qualidade (`html[data-qualidade]`) desliga efeitos em aparelho fraco.
