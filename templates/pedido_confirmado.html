@@ -12,7 +12,11 @@
     </svg>
     <span class="drop-selo">Pedido #{{ pedido.id }}</span>
     <h1 class="drop-titulo">Pedido confirmado.</h1>
-    <p class="drop-sub">Valeu, {{ pedido.entrega_nome|default:user.get_username }}. Previsão de entrega entre {{ chega_de|date:"d/m" }} e {{ chega_ate|date:"d/m" }}.</p>
+    <p class="drop-sub">Valeu, {{ pedido.entrega_nome|default:user.get_username }}. Recebemos seu pedido e já estamos preparando tudo. Previsão de entrega entre {{ chega_de|date:"d/m" }} e {{ chega_ate|date:"d/m" }}.</p>
+    <div class="confirmado-acoes">
+      <a class="btn btn-neon" href="#rastreio">Acompanhar meu pedido</a>
+      <a class="confirmado-continuar" href="{% url 'loja:produtos' %}">Continuar comprando</a>
+    </div>
     <ol class="passos">
       <li class="feito">Peça escolhida</li>
       <li class="feito">Entrega e pagamento</li>
@@ -87,8 +91,10 @@
     </aside>
   </div>
 </section>
+{% if animar %}{% include "_animacao_pedido.html" %}{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'js/mapa.js' %}"></script>
+{% if animar %}<script src="{% static 'js/animacao-pedido.js' %}"></script>{% endif %}
 {% endblock %}

@@ -25,7 +25,11 @@
   --r: 14px;
   --r-pequeno: 10px;
   --margem: clamp(1rem, 3vw, 2.5rem);
-  --ease: cubic-bezier(.2, .8, .2, 1);
+  /* movimento: tokens das receitas do transitions.dev */
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --dur-rapida: 150ms;  /* fechar, sumir */
+  --dur-media: 250ms;   /* abrir menu/modal, hover */
+  --dur-lenta: 500ms;   /* texto e blocos entrando */
 }
 
 * {
@@ -2897,11 +2901,11 @@ html.a11y-links a {
 
 /* a página antiga recua e some; a nova sobe. O topo fica parado (tem nome próprio) */
 ::view-transition-old(root) {
-  animation: .3s cubic-bezier(.2, .8, .2, 1) both pagina-sai;
+  animation: .3s cubic-bezier(.22, 1, .36, 1) both pagina-sai;
 }
 
 ::view-transition-new(root) {
-  animation: .5s cubic-bezier(.2, .8, .2, 1) both pagina-entra;
+  animation: .5s cubic-bezier(.22, 1, .36, 1) both pagina-entra;
 }
 
 @keyframes pagina-sai {
@@ -2924,7 +2928,7 @@ html.a11y-links a {
 
 ::view-transition-group(*) {
   animation-duration: .55s;
-  animation-timing-function: cubic-bezier(.2, .8, .2, 1);
+  animation-timing-function: cubic-bezier(.22, 1, .36, 1);
 }
 
 /* telas médias */
@@ -4117,5 +4121,287 @@ html.a11y-links a {
 @keyframes tracar {
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+/* botões do pedido confirmado */
+.confirmado-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem 1.5rem;
+}
+
+.confirmado-continuar {
+  color: var(--papel);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: .25em;
+}
+
+/* animação do pedido (templates/_animacao_pedido.html + js/animacao-pedido.js).
+   Tudo medido em cqw (largura do palco): a cena encolhe junto no celular, sem rolagem lateral */
+.anim-aberta,
+.anim-aberta body {
+  overflow: hidden;
+}
+
+.anim-pedido {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1rem;
+  overflow: hidden;
+  background: var(--palco);
+  color: var(--tinta);
+}
+
+.anim-pedido[hidden] {
+  display: none;
+}
+
+.anim-palco {
+  position: relative;
+  container-type: inline-size;
+  width: min(820px, 100%);
+  aspect-ratio: 16 / 10;
+}
+
+/* o chão vai até as bordas da tela; quem corta o que passa disso é o .anim-pedido */
+.anim-chao {
+  position: absolute;
+  inset: auto -100vw 0;
+  height: 22%;
+  border-top: .4cqw solid var(--tinta);
+  background: var(--palco-escuro);
+}
+
+/* caixa */
+.anim-caixa {
+  position: absolute;
+  z-index: 3;
+  left: 39cqw;
+  bottom: 9%;
+  width: 22cqw;
+  height: 15cqw;
+  display: grid;
+  place-items: center;
+  border-radius: .6cqw;
+  background: var(--tinta);
+  box-shadow: inset 0 -2.2cqw 0 -1.4cqw var(--neon);  /* fita neon embaixo */
+}
+
+.anim-caixa-marca {
+  color: var(--papel);
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: 4.2cqw;
+  letter-spacing: .04em;
+}
+
+.anim-qtd {
+  position: absolute;
+  top: 1cqw;
+  left: 1cqw;
+  padding: .2cqw .8cqw;
+  border-radius: 99px;
+  background: var(--neon);
+  color: var(--tinta);
+  font-size: 1.3cqw;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.anim-aba {
+  position: absolute;
+  top: -.9cqw;
+  width: 11cqw;
+  height: 1.2cqw;
+  border-radius: .4cqw;
+  background: var(--tinta);
+  box-shadow: inset 0 0 0 .25cqw var(--nevoa);
+}
+
+.anim-aba-esq {
+  left: 0;
+  transform-origin: 0 50%;
+}
+
+.anim-aba-dir {
+  right: 0;
+  transform-origin: 100% 50%;
+}
+
+.anim-etiqueta {
+  position: absolute;
+  right: 1.4cqw;
+  bottom: 3cqw;
+  display: flex;
+  align-items: center;
+  gap: .6cqw;
+  padding: .7cqw .9cqw;
+  border-radius: .4cqw;
+  background: var(--papel);
+  color: var(--tinta);
+  font-size: 1.5cqw;
+  opacity: 0;
+}
+
+.anim-etiqueta svg {
+  width: 2.4cqw;
+  height: 2.4cqw;
+}
+
+.anim-etiqueta circle {
+  fill: var(--neon);
+}
+
+.anim-etiqueta path {
+  fill: none;
+  stroke: var(--tinta);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+/* código de barras de enfeite */
+.anim-etiqueta i {
+  width: 3.4cqw;
+  height: 1.8cqw;
+  background: repeating-linear-gradient(90deg, var(--tinta) 0 .2cqw, transparent .2cqw .45cqw, var(--tinta) .45cqw .8cqw, transparent .8cqw 1cqw);
+}
+
+/* peça comprada */
+.anim-produto {
+  position: absolute;
+  z-index: 2;
+  left: 42cqw;
+  bottom: calc(9% + 15cqw);
+  width: 16cqw;
+  aspect-ratio: 4 / 5;
+  transform-origin: 50% 100%;
+}
+
+.anim-produto img,
+.anim-produto-mais {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 1cqw;
+  background: var(--papel);
+  box-shadow: 0 1.2cqw 2.4cqw -1.2cqw rgb(0 0 0 / .35);
+}
+
+/* mais de uma unidade: um segundo cartão inclinado atrás */
+.anim-produto-mais {
+  background: var(--palco-escuro);
+  transform: rotate(7deg) translate(1.2cqw, -.6cqw);
+}
+
+/* caminhão */
+.anim-caminhao {
+  position: absolute;
+  z-index: 1;
+  left: 22cqw;
+  bottom: 17%;
+  width: 52cqw;
+}
+
+.anim-caminhao-svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.anim-carga,
+.anim-cabine,
+.anim-porta,
+.anim-roda circle:first-child {
+  fill: var(--tinta);
+}
+
+.anim-porta {
+  stroke: var(--nevoa);
+  stroke-width: 2;
+}
+
+.anim-interior {
+  fill: var(--nevoa);
+}
+
+.anim-faixa,
+.anim-farol,
+.anim-aro {
+  fill: var(--neon);
+}
+
+.anim-vidro {
+  fill: var(--palco);
+}
+
+.anim-sombra {
+  fill: rgb(0 0 0 / .18);
+}
+
+.anim-marca {
+  fill: var(--papel);
+  font-family: var(--fonte);
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: 46px;
+  letter-spacing: 2px;
+}
+
+.anim-roda circle:first-child {
+  stroke: var(--nevoa);
+  stroke-width: 4;
+}
+
+.anim-roda path {
+  stroke: var(--tinta);
+  stroke-width: 4;
+}
+
+/* linhas de velocidade atrás do caminhão */
+.anim-vento {
+  position: absolute;
+  right: 100%;
+  width: 14cqw;
+  height: .5cqw;
+  border-radius: 99px;
+  background: var(--tinta);
+  transform-origin: 100% 50%;
+  opacity: 0;
+}
+
+.anim-vento:nth-child(1) { top: 25%; }
+.anim-vento:nth-child(2) { top: 45%; width: 9cqw; }
+.anim-vento:nth-child(3) { top: 65%; }
+
+.anim-legenda {
+  margin: 0;
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 4vw, 2.6rem);
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* no celular a cena fica 40% mais larga que a tela: caixa e caminhão parado continuam inteiros,
+   só as pontas (por onde o caminhão entra e sai) ficam de fora, cortadas pelo .anim-pedido */
+@media (max-width: 600px) {
+  .anim-palco {
+    width: 140%;
+    flex-shrink: 0;
   }
 }
