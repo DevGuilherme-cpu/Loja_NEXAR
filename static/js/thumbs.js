@@ -8,8 +8,9 @@ if (imagens.length) {
 
   // um canvas só para todos os cards
   const canvas = document.createElement('canvas');
+  const baixo = document.documentElement.dataset.qualidade === 'baixo';
   const renderer = criarRenderer(canvas, { preserveDrawingBuffer: true }, 1);
-  renderer.setSize(640, 800, false);
+  renderer.setSize(baixo ? 400 : 640, baixo ? 500 : 800, false);
   const cena = criarCena(renderer);
   const camera = new THREE.PerspectiveCamera(30, 640 / 800, 0.1, 100);
   camera.position.set(0, 0, 7);

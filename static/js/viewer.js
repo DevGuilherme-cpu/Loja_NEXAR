@@ -1,7 +1,7 @@
 // Visualizador 3D
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { criarRenderer, criarCena, criarModelo, pintar, aplicarVariante } from './pecas.js';
+import { criarRenderer, criarCena, criarModelo, pintar, aplicarVariante, vigiar } from './pecas.js';
 
 const canvas = document.getElementById('viewer-3d');
 const palco = canvas.closest('.pdp-3d');
@@ -34,9 +34,15 @@ let peca = await criarModelo({ ...canvas.dataset, seed: Number(canvas.dataset.id
 cena.add(peca);
 canvas.classList.add('pronto');
 
+// só desenha enquanto o palco está na tela (poupa bateria e não disputa com a rolagem)
+let naTela = true;
+new IntersectionObserver(([e]) => { naTela = e.isIntersecting; }).observe(canvas);
+const medir = vigiar(renderer);
 renderer.setAnimationLoop(() => {
+  if (!naTela) return;
   controles.update();
   renderer.render(cena, camera);
+  medir();
 });
 
 // troca entre 3D e fotos
@@ -164,7 +170,7 @@ if (caixa && (partes || variantes)) {
     Marinho: '#22306b', Azul: '#2747d6', Vermelho: '#c8233a', Laranja: '#e8641e',
   };
   const NOMES = {
-    corpo: 'Corpo', mangas: 'Mangas', gola: 'Gola', capuz: 'Capuz', bolso: 'Bolso', estampa: 'Estampa',
+    cor: 'Cor da peça', corpo: 'Corpo', mangas: 'Mangas', gola: 'Gola', capuz: 'Capuz', bolso: 'Bolso', estampa: 'Estampa',
     cabedal: 'Cabedal', biqueira: 'Biqueira', calcanhar: 'Calcanhar', cadarco: 'Cadarço',
     entressola: 'Entressola', sola: 'Sola',
     midnight: 'Noite', beach: 'Praia', street: 'Rua',
