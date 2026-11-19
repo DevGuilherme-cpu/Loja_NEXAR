@@ -15,6 +15,7 @@
       "three/addons/": "{% static 'vendor/three/addons/' %}"
     }}
   </script>
+  <script src="{% static 'js/acessibilidade.js' %}"></script>
 </head>
 <body>
   <a class="pular" href="#conteudo">Pular para o conteúdo</a>
@@ -34,13 +35,14 @@
     </nav>
 
     <div class="topo-acoes">
+      {% include "_acessibilidade.html" %}
       <form class="topo-busca" action="{% url 'loja:produtos' %}" method="get" role="search">
         <label class="sr" for="busca-topo">Buscar peças</label>
         <input id="busca-topo" type="search" name="busca" placeholder="Buscar" value="{{ request.GET.busca|default:'' }}">
       </form>
       {% if user.is_staff %}<a href="{% url 'loja:painel_inicio' %}">Painel</a>{% endif %}
       {% if user.is_authenticated %}
-        <span class="topo-usuario">Olá, {{ user.username }}</span>
+        <a class="topo-usuario" href="{% url 'loja:conta' %}">Olá, {{ user.username }}</a>
         {# Logout do Django só aceita POST (GET não desloga) #}
         <form class="topo-sair" method="post" action="{% url 'loja:sair' %}">{% csrf_token %}<button type="submit">Sair</button></form>
       {% else %}
@@ -68,7 +70,7 @@
       <nav aria-label="Conta">
         <h2>Conta</h2>
         {% if user.is_authenticated %}
-          <p>{{ user.get_username }}</p>
+          <a href="{% url 'loja:conta' %}">Minha conta</a>
           {% if user.is_staff %}<a href="{% url 'loja:painel_inicio' %}">Painel</a>{% endif %}
         {% else %}
           <a href="{% url 'loja:entrar' %}">Entrar</a>

@@ -126,10 +126,10 @@ def resumo(dias=30):
         "melhor_dia": melhor if melhor["valor"] else None,
         "categorias": barras(categorias, reais),
         "mais_vendidos": barras(produtos, pecas, limite=5),
-        # ordem fixa P, M, G, GG (não por quantidade)
-        "tamanhos": [{"nome": nome, "texto": pecas(tamanhos[nome]),
+        # ordem fixa (P, M, G, GG, 38...44, Único), só os tamanhos que venderam
+        "tamanhos": [{"nome": rotulo, "texto": pecas(tamanhos[nome]),
                       "pct": round(tamanhos[nome] / (max(tamanhos.values(), default=0) or 1) * 100)}
-                     for nome, _ in Pedido.TAMANHOS],
+                     for nome, rotulo in Pedido.TAMANHOS if tamanhos[nome]],
         "estoque_baixo": Produto.objects.filter(estoque__lte=ESTOQUE_BAIXO).order_by("estoque", "nome")[:6],
         "ultimos": Pedido.objects.select_related("usuario", "produto")[:5],
     }

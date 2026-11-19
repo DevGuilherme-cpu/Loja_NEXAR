@@ -1,0 +1,18 @@
+<div class="a11y">
+  <button type="button" class="a11y-botao" aria-expanded="false" aria-controls="a11y-menu">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="4" r="1.6" fill="currentColor" stroke="none"/><path d="M4.5 8.5 12 10l7.5-1.5M12 10v4.5m0 0-3 6.5m3-6.5 3 6.5"/>
+    </svg>
+    <span class="a11y-rotulo">Acessibilidade</span>
+  </button>
+  <div class="a11y-menu" id="a11y-menu" hidden>
+    <button type="button" data-a11y="fonte+">Aumentar fonte</button>
+    <button type="button" data-a11y="fonte-">Diminuir fonte</button>
+    <button type="button" data-a11y="pb" aria-pressed="false">Preto e branco</button>
+    <button type="button" data-a11y="inverter" aria-pressed="false">Inverter cores</button>
+    <button type="button" data-a11y="links" aria-pressed="false">Destacar links</button>
+    <button type="button" data-a11y="libras">Acessar VLibras</button>
+    <button type="button" data-a11y="restaurar">Restaurar recursos</button>
+  </div>
+  <p class="sr" id="a11y-aviso" role="status" aria-live="polite"></p>
+</div>

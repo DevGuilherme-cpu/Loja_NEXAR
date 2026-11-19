@@ -4,7 +4,8 @@ from functools import wraps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import DatabaseError, IntegrityError, transaction
@@ -12,6 +13,7 @@ from django.db.models import Count, F, ProtectedError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -106,7 +108,7 @@ def pedido(request):
     # (a personalização 3D é só visual). Campos extras como "preco" também são ignorados.
     tamanho = request.POST.get("tamanho", "")
     quantidade = request.POST.get("quantidade", "").strip()
-    if tamanho not in dict(Pedido.TAMANHOS):
+    if tamanho not in produto.tamanhos:  # tênis só aceita 38 a 44, boné só "U"...
         messages.error(request, "Escolha um tamanho válido.")
         return volta
     if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= QTD_MAX_POR_PEDIDO:
@@ -200,6 +202,42 @@ def cadastro(request):
             messages.success(request, f"Conta criada! Bem-vindo(a), {user.username}.")
             return redirect(destino_seguro(request))
     return render(request, "cadastro.html", {"form": form, "next": request.POST.get("next") or request.GET.get("next", "")})
+
+
+@login_required
+def conta(request):
+    pedidos = Pedido.objects.filter(usuario=request.user).select_related("produto")
+    return render(request, "conta.html", {"pedidos": pedidos})
+
+
+@login_required
+@require_POST
+def conta_encerrar(request):
+    """Encerra a conta pelo próprio site, sem precisar falar com ninguém.
+
+    Quem nunca comprou é apagado. Quem tem pedidos fica anonimizado e desativado: o pedido é
+    documento da venda (Pedido.usuario é PROTECT), mas sem nome, e-mail nem senha.
+    """
+    usuario = request.user
+    if usuario.is_staff:
+        messages.error(request, "Contas da equipe são encerradas pelo administrador da loja.")
+        return redirect("loja:conta")
+    if not usuario.check_password(request.POST.get("senha", "")):
+        messages.error(request, "Senha incorreta. A conta não foi encerrada.")
+        return redirect("loja:conta")
+
+    protocolo = f"NX-{timezone.localdate():%Y%m%d}-{usuario.pk}"
+    logout(request)
+    if Pedido.objects.filter(usuario=usuario).exists():
+        usuario.username = f"conta-encerrada-{usuario.pk}"
+        usuario.email = usuario.first_name = usuario.last_name = ""
+        usuario.is_active = False
+        usuario.set_unusable_password()
+        usuario.save()
+    else:
+        usuario.delete()
+    messages.success(request, f"Sua conta foi encerrada e seus dados pessoais foram apagados. Protocolo {protocolo}.")
+    return redirect("loja:index")
 
 
 # Painel (CRUD de produtos e categorias pelo ORM)

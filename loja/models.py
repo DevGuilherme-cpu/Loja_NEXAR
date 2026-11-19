@@ -1,3 +1,5 @@
+import unicodedata
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -37,9 +39,31 @@ class Produto(models.Model):
     def __str__(self):
         return self.nome
 
+    @property
+    def grade(self):
+        """Tipo de numeração: roupa e calca (P a GG), tenis (38 a 44) ou unico (boné, óculos...)."""
+        # shortcut: deduzido do nome e da categoria; se aparecerem exceções, virar um campo no Produto
+        texto = unicodedata.normalize("NFKD", f"{self.nome} {self.categoria.nome}").encode("ascii", "ignore")
+        texto = texto.decode().lower()
+        if "tenis" in texto or "calcado" in texto:
+            return "tenis"
+        if "calca" in texto or "bermuda" in texto:
+            return "calca"
+        if any(p in texto for p in ("bone", "oculos", "acessorio", "bolsa", "meia")):
+            return "unico"
+        return "roupa"
+
+    @property
+    def tamanhos(self):
+        return GRADES[self.grade]
+
+
+ROUPA = ["P", "M", "G", "GG"]
+GRADES = {"roupa": ROUPA, "calca": ROUPA, "tenis": [str(n) for n in range(38, 45)], "unico": ["U"]}
+
 
 class Pedido(models.Model):
-    TAMANHOS = [("P", "P"), ("M", "M"), ("G", "G"), ("GG", "GG")]
+    TAMANHOS = [(t, t) for t in ROUPA] + [(t, t) for t in GRADES["tenis"]] + [("U", "Único")]
 
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     produto = models.ForeignKey(Produto, on_delete=models.PROTECT)
