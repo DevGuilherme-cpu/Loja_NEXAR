@@ -72,6 +72,25 @@ class CheckoutTest(TestCase):
         self.assertEqual(self.client.get(reverse("loja:pedido_acompanhar", args=["codigo-errado"])).status_code, 404)
         self.assertEqual(self.client.get(reverse("loja:pedido_confirmado", args=[pedido.id])).status_code, 302)
 
+    def test_animacao_da_caixa_toca_uma_vez_so(self):
+        self.client.force_login(self.usuario)
+        self.escolher(quantidade="2")
+        r = self.entrega(quantidade="2")
+        primeira = self.client.get(r.url)
+        self.assertContains(primeira, 'id="anim-pedido"')
+        self.assertContains(primeira, "2 peças")
+        self.assertContains(primeira, "Acompanhar meu pedido")
+        # atualizar a página não repete a animação; a confirmação continua lá
+        segunda = self.client.get(r.url)
+        self.assertNotContains(segunda, 'id="anim-pedido"')
+        self.assertContains(segunda, "Pedido confirmado")
+
+    def test_formulario_com_erro_nao_anima(self):
+        self.client.force_login(self.usuario)
+        self.escolher()
+        self.entrega(cpf="123")
+        self.assertNotIn("animar_pedido", self.client.session)
+
     def test_compra_direta_sem_checkout_ainda_exige_conta(self):
         r = self.client.post(reverse("loja:pedido"), {"produto_id": self.produto.id, "tamanho": "M", "quantidade": "1"})
         self.assertTrue(r.url.startswith(reverse("loja:entrar")))

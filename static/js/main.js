@@ -63,14 +63,15 @@
         if (!el.dataset.revela) {
           el.dataset.revela = e.isIntersecting ? 'ok' : 'espera';
           if (e.isIntersecting) revelar.unobserve(el);
-          else gsap.set(el, { opacity: 0, y: 40, filter: 'blur(8px)' });  // opacidade, não visibility: o Tab continua chegando nele
+          else gsap.set(el, { opacity: 0, y: 16, filter: 'blur(3px)' });  // opacidade, não visibility: o Tab continua chegando nele
           return;
         }
         if (!e.isIntersecting) return;
         revelar.unobserve(el);
         el.dataset.revela = 'ok';
-        gsap.to(el, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: 'expo.out',
-          delay: fila++ * 0.07, clearProps: 'opacity,transform,filter' });
+        // receita "texts reveal" do transitions.dev: 500 ms, 3 px de blur, 40 ms entre um e outro
+        gsap.to(el, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.5, ease: 'power4.out',
+          delay: fila++ * 0.04, clearProps: 'opacity,transform,filter' });
       });
     });
     document.querySelectorAll('.loja .grid > .card, .loja .colecao, .loja .look, .loja .drop-banner, .loja .looks-texto')

@@ -98,6 +98,7 @@ def produto(request, id):
 
 
 SESSAO_CHECKOUT = "checkout"
+SESSAO_ANIMAR = "animar_pedido"  # id do pedido recém-criado: a animação da caixa toca uma vez só
 
 
 def contexto_checkout(request, produto, tamanho, quantidade, form, token=None):
@@ -157,8 +158,10 @@ def pagina_do_pedido(request, pedido, link=None):
     # rastreio simulado e acelerado (o mesmo de static/js/mapa.js): separa em 45 s, viaja em 315 s
     segundos = (timezone.now() - pedido.data).total_seconds()
     etapa = 2 if segundos < 45 else 3 if segundos < 360 else 4
+    # pop: ao atualizar a página a animação não toca de novo
+    animar = request.session.pop(SESSAO_ANIMAR, None) == pedido.id
     return render(request, "pedido_confirmado.html", {
-        "pedido": pedido, "etapa": etapa, "entregas": entregas([pedido]), "cd": CD, "link": link,
+        "pedido": pedido, "etapa": etapa, "entregas": entregas([pedido]), "cd": CD, "link": link, "animar": animar,
         "chega_de": base + timedelta(days=dias[0]), "chega_ate": base + timedelta(days=dias[1]),
     })
 
@@ -231,6 +234,7 @@ def pedido(request):
                                      quantidade=quantidade, preco_unitario=preco, **dados)
     if entrega:
         request.session.pop(SESSAO_CHECKOUT, None)
+        request.session[SESSAO_ANIMAR] = novo.id
         if visitante:
             return redirect("loja:pedido_acompanhar", codigo=novo.codigo)
         return redirect("loja:pedido_confirmado", id=novo.id)

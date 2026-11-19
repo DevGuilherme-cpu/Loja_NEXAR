@@ -57,7 +57,13 @@ as peças aparecem sobre o **palco cinza** de software 3D.
    No CSS: `.contagem b.rola` (número que muda), `.com-erro` treme, `.sucesso-check` se desenha.
 3. Troca de página = View Transitions do navegador (a página nova sobe; o `.topo` fica parado e o
    card vira o palco do produto pelo `view-transition-name: produto-<id>`). Não reintroduzir cortina.
-4. Easing padrão `--ease` (`cubic-bezier(.2,.8,.2,1)`); durações 0.25–0.7 s.
+4. Tempos e curvas seguem as receitas do **transitions.dev**: `--ease` = `cubic-bezier(.22,1,.36,1)`,
+   `--dur-rapida` 150 ms (fechar/sumir), `--dur-media` 250 ms (abrir modal/menu, hover), `--dur-lenta`
+   500 ms (texto e blocos entrando: sobe 12–16 px, blur de 3 px, 40 ms entre um e outro). No GSAP,
+   o equivalente de `--ease` é `power4.out`. Modal abre com `scale .96 → 1` + opacidade.
+   Animação de compra: `templates/_animacao_pedido.html` + `js/animacao-pedido.js` (peça → caixa →
+   etiqueta → caminhão, ~5,7 s). Só toca uma vez, logo depois da compra (`views.SESSAO_ANIMAR`),
+   tem "Pular animação"/Esc e some com "reduzir movimento".
 5. Sempre respeitar `prefers-reduced-motion` (o CSS zera transições e para as animações infinitas;
    o JS checa `anima`). O nível de qualidade (`html[data-qualidade]`) desliga efeitos em aparelho fraco.
 6. Efeitos de mouse só com `matchMedia('(hover: hover) and (pointer: fine)')`.

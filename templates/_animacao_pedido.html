@@ -1,0 +1,53 @@
+{% load static %}
+{# Animação do pedido confirmado (static/js/animacao-pedido.js). Começa escondida: sem JS, com erro ou com
+   "reduzir movimento", a página do pedido aparece direto. Só é incluída logo depois da compra (views.SESSAO_ANIMAR). #}
+<div class="anim-pedido" id="anim-pedido" role="dialog" aria-modal="true" aria-labelledby="anim-pedido-titulo" data-lenis-prevent hidden>
+  <h2 class="sr" id="anim-pedido-titulo">Pedido #{{ pedido.id }} recebido: embalando e enviando</h2>
+
+  <div class="anim-palco" aria-hidden="true">
+    <div class="anim-chao"></div>
+
+    <div class="anim-caminhao">
+      <span class="anim-vento"></span><span class="anim-vento"></span><span class="anim-vento"></span>
+      <svg class="anim-caminhao-svg" viewBox="0 0 400 190">
+        <ellipse class="anim-sombra" cx="200" cy="180" rx="190" ry="8"></ellipse>
+        <rect class="anim-carga" x="10" y="10" width="250" height="132" rx="10"></rect>
+        <rect class="anim-faixa" x="10" y="116" width="250" height="8"></rect>
+        <rect class="anim-interior" x="30" y="30" width="72" height="80" rx="3"></rect>
+        <rect class="anim-porta" x="30" y="30" width="72" height="80" rx="3"></rect>
+        <text class="anim-marca" x="182" y="86" text-anchor="middle">NEXAR</text>
+        <path class="anim-cabine" d="M264 42h68l46 52v48H264z"></path>
+        <path class="anim-vidro" d="M278 54h48l30 36h-78z"></path>
+        <rect class="anim-farol" x="366" y="108" width="12" height="9" rx="2"></rect>
+        <g transform="translate(78 150)"><g class="anim-roda"><circle r="27"></circle><circle class="anim-aro" r="12"></circle><path d="M-12 0h24M0-12v24"></path></g></g>
+        <g transform="translate(318 150)"><g class="anim-roda"><circle r="27"></circle><circle class="anim-aro" r="12"></circle><path d="M-12 0h24M0-12v24"></path></g></g>
+      </svg>
+    </div>
+
+    <div class="anim-produto">
+      {% if pedido.quantidade > 1 %}<span class="anim-produto-mais"></span>{% endif %}
+      {% if pedido.produto.imagem %}
+        <img src="{{ pedido.produto.imagem.url }}" alt="">
+      {% else %}
+        <img data-thumb data-id="{{ pedido.produto.id }}" data-categoria="{{ pedido.produto.categoria }}"
+             data-modelo="{{ pedido.produto.modelo_3d|default:'' }}" data-cor="{{ pedido.produto.cor }}"
+             data-media="{% get_media_prefix %}" alt="">
+      {% endif %}
+    </div>
+
+    <div class="anim-caixa">
+      <span class="anim-aba anim-aba-esq"></span>
+      <span class="anim-aba anim-aba-dir"></span>
+      <span class="anim-caixa-marca">NEXAR</span>
+      {% if pedido.quantidade > 1 %}<span class="anim-qtd">{{ pedido.quantidade }} peças</span>{% endif %}
+      <span class="anim-etiqueta">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11"></circle><path d="M7 12.5l3.2 3.2L17 9" pathLength="1"></path></svg>
+        <b>#{{ pedido.id }}</b>
+        <i></i>
+      </span>
+    </div>
+  </div>
+
+  <p class="anim-legenda" aria-live="polite">Pedido recebido</p>
+  <button type="button" class="btn anim-pular">Pular animação</button>
+</div>
