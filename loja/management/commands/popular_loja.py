@@ -47,8 +47,7 @@ class Command(BaseCommand):
             cliente, _ = User.objects.get_or_create(username=ped["cliente"])
             produto = produtos[ped["produto"]]
             # preco_unitario guarda o preço do dia da compra (não muda se o produto for reajustado)
-            pedido = Pedido.objects.create(usuario=cliente, produto=produto, preco_unitario=produto.preco,
-                                           tamanho=ped["tamanho"], quantidade=ped["quantidade"])
+            pedido = Pedido.com_item(produto, ped["tamanho"], ped["quantidade"], produto.preco, usuario=cliente)
             # volta a data do exemplo
             Pedido.objects.filter(pk=pedido.pk).update(data=timezone.make_aware(ped["data"]))
 

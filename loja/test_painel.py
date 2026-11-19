@@ -18,8 +18,7 @@ class PainelVisaoGeralTest(TestCase):
         cls.camiseta = Produto.objects.create(nome="Camiseta Teste", preco="100.00", estoque=2, categoria=cat)
         cls.moletom = Produto.objects.create(nome="Moletom Teste", preco="250.00", estoque=40, categoria=cat)
         cliente = User.objects.create_user("bia", password="x")
-        Pedido.objects.create(usuario=cliente, produto=cls.camiseta, tamanho="M", quantidade=3,
-                              preco_unitario=Decimal("100.00"))
+        Pedido.com_item(cls.camiseta, "M", 3, Decimal("100.00"), usuario=cliente)
         cls.staff = User.objects.create_user("chefe", password="x", is_staff=True)
 
     def test_reais(self):
@@ -70,7 +69,7 @@ class PainelTelasTest(TestCase):
         novos = Pedido.objects.count() - pedidos_antes
         self.assertEqual(novos, 6)
         self.assertContains(r, "6 pedidos de exemplo criados")
-        vendidas = sum(Pedido.objects.order_by("-id").values_list("quantidade", flat=True)[:novos])
+        vendidas = sum(p.quantidade for p in Pedido.objects.order_by("-id").prefetch_related("itens")[:novos])
         self.assertEqual(sum(Produto.objects.values_list("estoque", flat=True)), estoque_antes - vendidas)
 
     def test_pedidos_mostram_mapa_de_entregas(self):

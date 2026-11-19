@@ -81,9 +81,10 @@ class CompraValidaTests(PedidoBase):
         resposta = self.comprar(tamanho="G", quantidade="3")
         self.assertRedirects(resposta, self.url_produto, fetch_redirect_response=False)
         pedido = Pedido.objects.get()
-        self.assertEqual((pedido.usuario, pedido.produto_id, pedido.tamanho, pedido.quantidade),
+        item = pedido.itens.get()
+        self.assertEqual((pedido.usuario, item.produto_id, item.tamanho, item.quantidade),
                          (self.usuario, self.produto.id, "G", 3))
-        self.assertEqual(pedido.preco_unitario, Decimal("99.90"))
+        self.assertEqual(item.preco_unitario, Decimal("99.90"))
         self.assertEqual(self.estoque(), 2)
         nivel, texto = mensagens(resposta)[-1]
         self.assertEqual(nivel, "success")
@@ -99,12 +100,12 @@ class CompraValidaTests(PedidoBase):
         self.comprar(quantidade="1")
         Produto.objects.filter(id=self.produto.id).update(preco=Decimal("10.00"))
         pedido = Pedido.objects.get()
-        self.assertEqual(pedido.preco_unitario, Decimal("99.90"))
+        self.assertEqual(pedido.itens.get().preco_unitario, Decimal("99.90"))
         self.assertEqual(pedido.total, Decimal("99.90"))
 
     def test_preco_manipulado_no_post_e_ignorado(self):
         self.comprar(quantidade="1", preco="1", preco_unitario="0.01", personalizacao="cor=#000")
-        self.assertEqual(Pedido.objects.get().preco_unitario, Decimal("99.90"))
+        self.assertEqual(Pedido.objects.get().itens.get().preco_unitario, Decimal("99.90"))
 
     def test_pagina_do_produto_tem_form_e_token_para_logado(self):
         resposta = self.client.get(self.url_produto)
@@ -272,7 +273,7 @@ class UltimaPecaConcorrenteTests(TransactionTestCase):
 
         self.assertEqual(erros, [])
         self.assertEqual(status, [302, 302])
-        self.assertEqual(Pedido.objects.filter(produto=produto).count(), 1)
+        self.assertEqual(Pedido.objects.filter(itens__produto=produto).count(), 1)
         self.assertEqual(Produto.objects.get(id=produto.id).estoque, 0)
 
 

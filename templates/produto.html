@@ -45,7 +45,10 @@
       </div>
     </div>
 
-    {# Comprar passa pelo checkout (entrega e pagamento); quem grava o pedido é /pedido/, chamado de lá #}
+    {% comment %}
+      Comprar põe na sacola e vai ao checkout (entrega e pagamento); quem grava o pedido é /pedido/, chamado de lá.
+      Adicionar à sacola usa o mesmo formulário com outro formaction (com JS, sem recarregar: js/sacola.js).
+    {% endcomment %}
     <form class="pdp-form" method="post" action="{% url 'loja:checkout' %}">
       {% csrf_token %}
       {% if token_pedido %}<input type="hidden" name="token_pedido" value="{{ token_pedido }}">{% endif %}
@@ -70,7 +73,10 @@
         <input type="number" name="quantidade" value="1" min="1" max="{% if produto.estoque < 10 %}{{ produto.estoque }}{% else %}10{% endif %}">
       </label>
       {% if produto.estoque %}
-        <button class="btn" type="submit">Comprar</button>
+        <div class="pdp-botoes">
+          <button class="btn" type="submit">Comprar agora</button>
+          <button class="btn btn-contorno" type="submit" formaction="{% url 'loja:sacola_adicionar' %}" data-sacola-adicionar>Adicionar à sacola</button>
+        </div>
         {% if produto.estoque <= 3 %}<p class="pdp-estoque">Só restam {{ produto.estoque }} peças.</p>{% endif %}
       {% else %}
         <button class="btn" type="submit" disabled>Esgotado</button>
@@ -133,5 +139,7 @@
 {% endblock %}
 
 {% block scripts %}
+{# sacola.js antes do viewer.js (módulo, roda depois): os dois ouvem o envio do formulário, nessa ordem #}
+<script src="{% static 'js/sacola.js' %}"></script>
 <script type="module" src="{% static 'js/viewer.js' %}"></script>
 {% endblock %}

@@ -1,5 +1,6 @@
 import secrets
 import unicodedata
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
@@ -63,19 +64,15 @@ ROUPA = ["P", "M", "G", "GG"]
 GRADES = {"roupa": ROUPA, "calca": ROUPA, "tenis": [str(n) for n in range(38, 45)], "unico": ["U"]}
 
 
+TAMANHOS = [(t, t) for t in ROUPA] + [(t, t) for t in GRADES["tenis"]] + [("U", "Único")]
+
+
 class Pedido(models.Model):
-    TAMANHOS = [(t, t) for t in ROUPA] + [(t, t) for t in GRADES["tenis"]] + [("U", "Único")]
+    """A compra: quem comprou, entrega, frete e pagamento. As peças ficam em ItemPedido (pedido.itens)."""
+    TAMANHOS = TAMANHOS
 
     # vazio = compra de visitante (sem conta): os dados ficam em entrega_* e entrega_email
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
-    produto = models.ForeignKey(Produto, on_delete=models.PROTECT)
-    tamanho = models.CharField(max_length=2, choices=TAMANHOS)
-    quantidade = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
-    # preço do produto no momento da compra: se o preço do produto mudar depois,
-    # o total dos pedidos antigos continua o mesmo
-    # blank=True: no admin pode ficar vazio e o save() copia o preço atual do produto
-    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, blank=True,
-                                         validators=[MinValueValidator(0)])
     data = models.DateTimeField(auto_now_add=True)
 
     # entrega e pagamento (checkout). Vazios em pedidos antigos e nos feitos pelo painel/admin.
@@ -101,13 +98,9 @@ class Pedido(models.Model):
     class Meta:
         db_table = "pedidos"
         ordering = ["-data"]
-        constraints = [
-            models.CheckConstraint(condition=models.Q(quantidade__gte=1), name="pedido_quantidade_minima_1"),
-            models.CheckConstraint(condition=models.Q(preco_unitario__gte=0), name="pedido_preco_unitario_nao_negativo"),
-        ]
 
     def __str__(self):
-        return f"Pedido {self.id} - {self.cliente} - {self.produto}"
+        return f"Pedido {self.id} - {self.cliente}"
 
     @property
     def cliente(self):
@@ -117,19 +110,69 @@ class Pedido(models.Model):
         return f"{self.entrega_nome or 'Cliente'} (visitante)"
 
     def save(self, *args, **kwargs):
-        # Sem preço informado (ex.: pedido criado pelo /admin/), grava o preço do produto agora
-        if self.preco_unitario is None and self.produto_id:
-            self.preco_unitario = self.produto.preco
         if not self.codigo:
             self.codigo = secrets.token_urlsafe(16)
         super().save(*args, **kwargs)
 
+    @classmethod
+    def com_item(cls, produto, tamanho, quantidade=1, preco_unitario=None, **campos):
+        """Pedido de uma peça só (painel, simulação, dados de exemplo e testes)."""
+        pedido = cls.objects.create(**campos)
+        pedido.itens.create(produto=produto, tamanho=tamanho, quantidade=quantidade, preco_unitario=preco_unitario)
+        return pedido
+
+    # As contas usam itens.all(): com prefetch_related("itens") não vão ao banco de novo
     @property
     def total(self):
-        if self.preco_unitario is None:
-            return None
-        return self.preco_unitario * self.quantidade
+        """Soma das peças, sem o frete."""
+        return sum((i.total for i in self.itens.all()), Decimal(0))
+
+    @property
+    def quantidade(self):
+        """Total de peças do pedido."""
+        return sum(i.quantidade for i in self.itens.all())
 
     @property
     def total_com_frete(self):
-        return None if self.total is None else self.total + self.frete
+        return self.total + self.frete
+
+    @property
+    def resumo(self):
+        """"2× Camiseta Grid (M), 1× Boné Drop (U)" """
+        return ", ".join(f"{i.quantidade}× {i.produto.nome} ({i.tamanho})" for i in self.itens.all())
+
+
+class ItemPedido(models.Model):
+    """Uma peça do pedido: produto, tamanho, quantidade e o preço pago."""
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="itens")
+    produto = models.ForeignKey(Produto, on_delete=models.PROTECT)
+    tamanho = models.CharField(max_length=2, choices=TAMANHOS)
+    quantidade = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    # preço do produto no momento da compra: se o preço do produto mudar depois,
+    # o total dos pedidos antigos continua o mesmo
+    # blank=True: no admin pode ficar vazio e o save() copia o preço atual do produto
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, blank=True,
+                                         validators=[MinValueValidator(0)])
+
+    class Meta:
+        db_table = "itens_pedido"
+        ordering = ["id"]
+        verbose_name = "item do pedido"
+        verbose_name_plural = "itens do pedido"
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantidade__gte=1), name="item_quantidade_minima_1"),
+            models.CheckConstraint(condition=models.Q(preco_unitario__gte=0), name="item_preco_unitario_nao_negativo"),
+        ]
+
+    def __str__(self):
+        return f"{self.quantidade}× {self.produto} ({self.tamanho})"
+
+    def save(self, *args, **kwargs):
+        # Sem preço informado (ex.: item criado pelo /admin/), grava o preço do produto agora
+        if self.preco_unitario is None and self.produto_id:
+            self.preco_unitario = self.produto.preco
+        super().save(*args, **kwargs)
+
+    @property
+    def total(self):
+        return (self.preco_unitario or Decimal(0)) * self.quantidade

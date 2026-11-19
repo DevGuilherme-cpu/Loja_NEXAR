@@ -73,13 +73,15 @@
 
     <aside class="resumo">
       <h2>Resumo</h2>
-      <div class="resumo-item">
-        <div class="resumo-img">{% if pedido.produto.imagem %}<img src="{{ pedido.produto.imagem.url }}" alt="">{% endif %}</div>
-        <div>
-          <b>{{ pedido.produto.nome }}</b>
-          <span>Tamanho {{ pedido.get_tamanho_display }}, {{ pedido.quantidade }} unidade{{ pedido.quantidade|pluralize }}</span>
+      {% for item in pedido.itens.all %}
+        <div class="resumo-item">
+          <div class="resumo-img">{% if item.produto.imagem %}<img src="{{ item.produto.imagem.url }}" alt="">{% endif %}</div>
+          <div>
+            <b>{{ item.produto.nome }}</b>
+            <span>Tamanho {{ item.get_tamanho_display }}, {{ item.quantidade }} unidade{{ item.quantidade|pluralize }}</span>
+          </div>
         </div>
-      </div>
+      {% endfor %}
       <dl class="resumo-contas">
         <div><dt>Subtotal</dt><dd>R$ {{ pedido.total|floatformat:2 }}</dd></div>
         <div><dt>Frete</dt><dd>{% if pedido.frete %}R$ {{ pedido.frete|floatformat:2 }}{% else %}Grátis{% endif %}</dd></div>

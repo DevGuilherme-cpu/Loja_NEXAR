@@ -20,7 +20,9 @@ description: Banco de dados da NEXAR — MySQL local, Supabase em produção, mo
 
 ## Tabelas (limite do trabalho: 3 a 5 tabelas próprias)
 
-`auth_user` (do Django) · `categorias` · `produtos` (cor, imagem, imagem_2, modelo_3d) · `pedidos`.
+`auth_user` (do Django) · `categorias` · `produtos` (cor, imagem, imagem_2, modelo_3d) · `pedidos` (quem
+comprou, entrega, frete, pagamento, código do link) · `itens_pedido` (produto, tamanho, quantidade e preço pago
+de cada peça; `pedido.itens`). A sacola fica na sessão (`views.SESSAO_SACOLA`), não no banco.
 FKs com `on_delete=PROTECT`. Não criar tabela nova sem a pessoa concordar (estoura o limite).
 
 ## Mudou um model
@@ -42,12 +44,13 @@ editar migration que já foi para o GitHub, imprimir o conteúdo do `.env`.
 ## Consultas e performance
 
 - Card mostra categoria → `select_related("categoria")` (evita N+1).
-- Pedidos → `select_related("usuario", "produto__categoria")` = o **JOIN** do trabalho.
+- Pedidos → `select_related("usuario").prefetch_related("itens__produto__categoria")` (`views.PEDIDOS`).
+  Estatísticas por produto/categoria/tamanho somam `ItemPedido` (`painel.itens_entre`).
 - Contagem por categoria → `annotate(total=Count("produto"))`.
 - Filtro vindo da URL: validar (`categoria.isdigit()`), nunca montar SQL com string.
 
 ## SQL para a apresentação (o professor quer ver os comandos)
 
 - CREATE TABLE gerado: `python manage.py sqlmigrate loja 0001`.
-- Ver o JOIN que o Django faz: `print(Pedido.objects.select_related("usuario","produto__categoria").query)`.
+- Ver o JOIN que o Django faz: `print(ItemPedido.objects.select_related("pedido__usuario","produto__categoria").query)`.
 - Consultas para rodar no Workbench: seção 7 do `NEXAR_Plano_do_Projeto.pdf`.

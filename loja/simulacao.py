@@ -36,9 +36,8 @@ def simular_pedidos(quantidade=6, dias=14):
         # mesma regra da compra pela loja: o UPDATE só baixa se ainda houver estoque
         if not Produto.objects.filter(id=produto.id, estoque__gte=qtd).update(estoque=F("estoque") - qtd):
             continue
-        pedido = Pedido.objects.create(usuario=cliente_ficticio(random.choice(CLIENTES)), produto=produto,
-                                       tamanho=random.choice(produto.tamanhos),
-                                       quantidade=qtd, preco_unitario=produto.preco)
+        pedido = Pedido.com_item(produto, random.choice(produto.tamanhos), qtd, produto.preco,
+                                 usuario=cliente_ficticio(random.choice(CLIENTES)))
         if i:
             data = agora - timedelta(days=random.randint(0, dias - 1), hours=random.randint(0, 23),
                                      minutes=random.randint(0, 59))

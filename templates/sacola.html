@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Sacola — NEXAR{% endblock %}
+
+{% block conteudo %}
+<section class="drop sacola">
+  <header class="drop-topo">
+    <span class="drop-selo">{{ pecas }} peça{{ pecas|pluralize }}</span>
+    <h1 class="drop-titulo">Sua sacola.</h1>
+    <ol class="passos">
+      <li class="atual" aria-current="step">Sacola</li>
+      <li>Entrega e pagamento</li>
+      <li>Pedido confirmado</li>
+    </ol>
+  </header>
+
+  {% if linhas %}
+  <div class="checkout-grade">
+    <ul class="sacola-lista">
+      {% for l in linhas %}
+        <li class="sacola-item">
+          <a class="sacola-img" href="{% url 'loja:produto' l.produto.id %}" tabindex="-1" aria-hidden="true">
+            {% if l.produto.imagem %}
+              <img src="{{ l.produto.imagem.url }}" alt="">
+            {% else %}
+              <img data-thumb data-id="{{ l.produto.id }}" data-categoria="{{ l.produto.categoria }}"
+                   data-modelo="{{ l.produto.modelo_3d|default:'' }}" data-cor="{{ l.produto.cor }}"
+                   data-media="{% get_media_prefix %}" alt="">
+            {% endif %}
+          </a>
+
+          <div class="sacola-info">
+            <a href="{% url 'loja:produto' l.produto.id %}"><b>{{ l.produto.nome }}</b></a>
+            <span>{{ l.produto.categoria }}, tamanho {% if l.tamanho == "U" %}único{% else %}{{ l.tamanho }}{% endif %}</span>
+            <span>R$ {{ l.produto.preco|floatformat:2 }} cada</span>
+            {% if l.quantidade > l.produto.estoque %}
+              <span class="sacola-alerta">{% if l.produto.estoque %}Só restam {{ l.produto.estoque }}. Diminua a quantidade.{% else %}Esgotou. Tire da sacola.{% endif %}</span>
+            {% endif %}
+          </div>
+
+          <form class="sacola-qtd" method="post" action="{% url 'loja:sacola_atualizar' %}">
+            {% csrf_token %}
+            <input type="hidden" name="linha" value="{{ l.chave }}">
+            <button type="submit" name="quantidade" value="{{ l.quantidade|add:'-1' }}"
+                    aria-label="Tirar uma unidade de {{ l.produto.nome }}">−</button>
+            <span>{{ l.quantidade }}<span class="sr"> unidade{{ l.quantidade|pluralize }}</span></span>
+            <button type="submit" name="quantidade" value="{{ l.quantidade|add:'1' }}"
+                    aria-label="Mais uma unidade de {{ l.produto.nome }}"{% if l.quantidade >= 10 %} disabled{% endif %}>+</button>
+          </form>
+
+          <p class="sacola-preco">R$ {{ l.total|floatformat:2 }}</p>
+
+          <form class="sacola-tirar" method="post" action="{% url 'loja:sacola_atualizar' %}">
+            {% csrf_token %}
+            <input type="hidden" name="linha" value="{{ l.chave }}">
+            <button class="link" type="submit" name="quantidade" value="0">Tirar<span class="sr"> {{ l.produto.nome }} da sacola</span></button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <aside class="resumo" aria-labelledby="resumo-titulo">
+      <h2 id="resumo-titulo">Resumo</h2>
+      <div class="frete-meta">
+        <p>{% if falta_frete_gratis > 0 %}Faltam <b>R$ {{ falta_frete_gratis|floatformat:2 }}</b> para o frete grátis.{% else %}<b>Frete padrão grátis</b> nesta compra.{% endif %}</p>
+        <span class="frete-meta-barra" aria-hidden="true"><span style="--pct: {{ frete_gratis_pct }}%"></span></span>
+      </div>
+      <dl class="resumo-contas">
+        <div><dt>Subtotal</dt><dd>R$ {{ subtotal|floatformat:2 }}</dd></div>
+        <div><dt>Frete</dt><dd>No próximo passo</dd></div>
+      </dl>
+      <a class="btn btn-neon" href="{% url 'loja:checkout' %}">Finalizar compra</a>
+      <a class="link resumo-voltar" href="{% url 'loja:produtos' %}">Continuar comprando</a>
+    </aside>
+  </div>
+  {% else %}
+    <div class="sacola-vazia">
+      <p>Sua sacola está vazia. Escolha uma peça, gire em 3D e adicione aqui.</p>
+      <a class="btn" href="{% url 'loja:produtos' %}">Ver as peças</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

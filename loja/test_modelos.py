@@ -12,7 +12,7 @@ from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase
 
 from .mock_data import PRODUTOS
-from .models import Categoria, Pedido, Produto
+from .models import Categoria, ItemPedido, Pedido, Produto
 
 
 class PrecoUnitarioTest(TestCase):
@@ -23,36 +23,41 @@ class PrecoUnitarioTest(TestCase):
         cls.produto = Produto.objects.create(nome="Camiseta", preco=Decimal("100.00"), categoria=cls.categoria)
 
     def test_mudar_preco_do_produto_nao_muda_total_do_pedido(self):
-        pedido = Pedido.objects.create(usuario=self.usuario, produto=self.produto, tamanho="M",
-                                       quantidade=3, preco_unitario=self.produto.preco)
+        pedido = Pedido.com_item(self.produto, "M", 3, self.produto.preco, usuario=self.usuario)
         self.assertEqual(pedido.total, Decimal("300.00"))
 
         self.produto.preco = Decimal("150.00")
         self.produto.save()
 
         pedido = Pedido.objects.get(pk=pedido.pk)
-        self.assertEqual(pedido.preco_unitario, Decimal("100.00"))
+        self.assertEqual(pedido.itens.get().preco_unitario, Decimal("100.00"))
         self.assertEqual(pedido.total, Decimal("300.00"))
+
+    def test_total_soma_todos_os_itens(self):
+        outro = Produto.objects.create(nome="Boné", preco=Decimal("50.00"), categoria=self.categoria)
+        pedido = Pedido.com_item(self.produto, "M", 2, usuario=self.usuario, frete=Decimal("19.90"))
+        pedido.itens.create(produto=outro, tamanho="U", quantidade=3)
+        self.assertEqual((pedido.total, pedido.quantidade), (Decimal("350.00"), 5))
+        self.assertEqual(pedido.total_com_frete, Decimal("369.90"))
+        self.assertEqual(pedido.resumo, "2× Camiseta (M), 3× Boné (U)")
 
     def test_constraint_rejeita_quantidade_zero(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Pedido.objects.create(usuario=self.usuario, produto=self.produto, tamanho="M",
-                                  quantidade=0, preco_unitario=Decimal("100.00"))
+            Pedido.com_item(self.produto, "M", 0, Decimal("100.00"), usuario=self.usuario)
 
     def test_constraint_rejeita_preco_negativo(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Produto.objects.create(nome="Errado", preco=Decimal("-1.00"), categoria=self.categoria)
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Pedido.objects.create(usuario=self.usuario, produto=self.produto, tamanho="M",
-                                  quantidade=1, preco_unitario=Decimal("-1.00"))
+            Pedido.com_item(self.produto, "M", 1, Decimal("-1.00"), usuario=self.usuario)
 
 
 class PopularLojaTest(TestCase):
     def test_popular_loja_grava_preco_unitario_igual_ao_preco(self):
         call_command("popular_loja", verbosity=0, stdout=StringIO())
         self.assertEqual(Pedido.objects.count(), 5)
-        for pedido in Pedido.objects.select_related("produto"):
-            self.assertEqual(pedido.preco_unitario, pedido.produto.preco)
+        for item in ItemPedido.objects.select_related("produto"):
+            self.assertEqual(item.preco_unitario, item.produto.preco)
         ana = Pedido.objects.get(usuario__username="ana.souza")
         self.assertEqual(ana.total, Decimal("449.70"))  # 3 x 149,90
 
@@ -172,7 +177,43 @@ class PrecoAutomaticoTest(TestCase):
         cat = Categoria.objects.create(nome="Teste auto")
         prod = Produto.objects.create(nome="Peça", preco=Decimal("88.50"), estoque=5, categoria=cat)
         user = User.objects.create_user("auto_preco")
-        pedido = Pedido.objects.create(usuario=user, produto=prod, tamanho="M", quantidade=2)
-        self.assertEqual(pedido.preco_unitario, Decimal("88.50"))
+        pedido = Pedido.com_item(prod, "M", 2, usuario=user)
+        self.assertEqual(pedido.itens.get().preco_unitario, Decimal("88.50"))
         self.assertEqual(pedido.total, Decimal("177.00"))
-        self.assertIsNone(Pedido(quantidade=2).total)
+        self.assertEqual(Pedido.objects.create(usuario=user).total, Decimal(0))  # pedido sem peças
+
+
+class MigracaoItensDoPedidoTest(TransactionTestCase):
+    """A 0012 copia cada pedido antigo (uma peça só) para itens_pedido, com o preço pago; a 0013 tira as colunas."""
+
+    antes = [("loja", "0011_compra_sem_conta")]
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def test_pedido_antigo_vira_pedido_com_um_item(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.antes)
+        antigos = executor.loader.project_state(self.antes).apps
+        usuario = antigos.get_model("auth", "User").objects.create(username="antigo")
+        categoria = antigos.get_model("loja", "Categoria").objects.create(nome="Antiga")
+        produto = antigos.get_model("loja", "Produto").objects.create(nome="Moletom", preco=Decimal("249.90"),
+                                                                      categoria=categoria)
+        pedido_id = antigos.get_model("loja", "Pedido").objects.create(
+            usuario=usuario, produto=produto, tamanho="G", quantidade=2, preco_unitario=Decimal("199.90"),
+            frete=Decimal("19.90"), codigo="codigo-antigo").pk
+
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+        pedido = Pedido.objects.get(pk=pedido_id)
+        item = pedido.itens.get()
+        self.assertEqual((item.produto_id, item.tamanho, item.quantidade, item.preco_unitario),
+                         (produto.pk, "G", 2, Decimal("199.90")))  # o preço pago, não o atual
+        self.assertEqual((pedido.total_com_frete, pedido.codigo), (Decimal("419.70"), "codigo-antigo"))
+        with connection.cursor() as cursor:
+            colunas = [c.name for c in connection.introspection.get_table_description(cursor, "pedidos")]
+        self.assertNotIn("produto_id", colunas)
