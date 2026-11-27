@@ -1,0 +1,81 @@
+{% extends "painel/base_painel.html" %}
+
+{% block titulo %}Clientes — Painel NEXAR{% endblock %}
+
+{% block painel %}
+<div class="painel-topo">
+  <div>
+    <h1>Clientes</h1>
+    <p class="contador">{{ total_clientes }} no grupo Clientes, {{ equipe|length }} no grupo Funcionários, {{ ranking|length }} já compraram</p>
+  </div>
+</div>
+
+<section class="kpis" aria-label="Resumo de clientes">
+  <article class="cartao kpi">
+    <h2>Clientes cadastrados</h2>
+    <p class="kpi-valor">{{ total_clientes }}</p>
+    <p class="kpi-var">Grupo Clientes no banco</p>
+  </article>
+  <article class="cartao kpi">
+    <h2>Já compraram</h2>
+    <p class="kpi-valor">{{ ranking|length }}</p>
+    <p class="kpi-var">Com conta ou como visitante</p>
+  </article>
+  {% with melhor=ranking.0 %}
+  <article class="cartao kpi">
+    <h2>Quem mais compra</h2>
+    <p class="kpi-valor">{{ melhor.nome|default:"Ninguém ainda" }}</p>
+    <p class="kpi-var">{% if melhor %}{{ melhor.texto }} em {{ melhor.pedidos }} pedido{{ melhor.pedidos|pluralize }}{% else %}Sem pedidos{% endif %}</p>
+  </article>
+  {% endwith %}
+  <article class="cartao kpi">
+    <h2>Equipe</h2>
+    <p class="kpi-valor">{{ equipe|length }}</p>
+    <p class="kpi-var">Grupo Funcionários: entram no painel</p>
+  </article>
+</section>
+
+<section class="cartao" aria-labelledby="ranking-titulo">
+  <div class="cartao-topo">
+    <h2 id="ranking-titulo">Ranking de quem mais compra</h2>
+    <p>Total gasto com frete, de todos os pedidos</p>
+  </div>
+  <div class="tabela-wrap">
+    <table class="tabela">
+      <thead>
+        <tr><th class="num">#</th><th>Cliente</th><th>Tipo</th><th class="num">Pedidos</th><th class="num">Peças</th><th class="num">Total gasto</th><th>Último pedido</th></tr>
+      </thead>
+      <tbody>
+        {% for c in ranking %}
+          <tr{% if c.posicao <= 3 %} class="destaque"{% endif %}>
+            <td class="num">{% if c.posicao <= 3 %}<span class="selo sobe">{{ c.posicao }}º</span>{% else %}{{ c.posicao }}º{% endif %}</td>
+            <td>{{ c.nome }}</td>
+            <td>{% if c.equipe %}Funcionário{% elif c.conta %}Com conta{% else %}Visitante{% endif %}</td>
+            <td class="num">{{ c.pedidos }}</td>
+            <td class="num">{{ c.pecas }}</td>
+            <td class="num">{{ c.texto }}</td>
+            <td>{{ c.ultimo|date:"d/m/Y" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">Nenhum pedido ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="cartao" aria-labelledby="equipe-titulo">
+  <div class="cartao-topo">
+    <h2 id="equipe-titulo">Funcionários</h2>
+    <p>Para incluir ou tirar alguém da equipe, marque "Membro da equipe" no admin do Django</p>
+  </div>
+  <ul class="lista-painel">
+    {% for u in equipe %}
+      <li><span><b>{{ u.get_username }}</b>{% if u.is_superuser %} (administrador){% endif %}</span>
+        <span class="lista-valor">{% if u.last_login %}Último acesso {{ u.last_login|date:"d/m/Y H:i" }}{% else %}Nunca entrou{% endif %}</span></li>
+    {% empty %}
+      <li class="vazio">Nenhum funcionário cadastrado.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

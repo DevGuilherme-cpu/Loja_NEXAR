@@ -1,0 +1,56 @@
+{% extends "painel/base_painel.html" %}
+
+{% block titulo %}Finanças — Painel NEXAR{% endblock %}
+
+{% block painel %}
+<div class="painel-topo">
+  <div>
+    <h1>Finanças</h1>
+    <p class="contador">{{ total_periodo }} em {{ pedidos_periodo }} pedido{{ pedidos_periodo|pluralize }} nos últimos {{ dias }} dias</p>
+  </div>
+  <nav class="periodos" aria-label="Período">
+    {% for p in periodos %}
+      <a href="?dias={{ p }}" {% if p == dias %}aria-current="page"{% endif %}>{{ p }} dias</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<section class="kpis" aria-label="Resumo financeiro dos últimos {{ dias }} dias">
+  {% for k in kpis %}
+    <article class="cartao kpi">
+      <h2>{{ k.nome }}</h2>
+      <p class="kpi-valor">{{ k.valor }}</p>
+      <p class="kpi-var">
+        {% if k.var is None %}
+          Sem vendas nos {{ dias }} dias anteriores para comparar
+        {% else %}
+          <span class="selo {% if k.var > 0 %}sobe{% elif k.var == 0 %}igual{% endif %}">{% if k.var > 0 %}+{% endif %}{{ k.var }}%</span>
+          em relação aos {{ dias }} dias anteriores
+        {% endif %}
+      </p>
+    </article>
+  {% endfor %}
+</section>
+
+<div class="dash-dupla">
+  <section class="cartao">
+    <h2>Por forma de pagamento</h2>
+    {% include "painel/_barras.html" with itens=por_pagamento %}
+  </section>
+
+  <section class="cartao">
+    <h2>Por tipo de entrega</h2>
+    {% include "painel/_barras.html" with itens=por_envio %}
+  </section>
+</div>
+
+<section class="cartao">
+  <div class="cartao-topo">
+    <h2>Mês a mês</h2>
+    <p>Total recebido (peças + frete) nos últimos 6 meses</p>
+  </div>
+  {% include "painel/_barras.html" with itens=mensal %}
+</section>
+
+<p class="bloco-nota">Pagamento simulado: os valores são dos pedidos gravados no banco, sem taxas de cartão ou Pix.</p>
+{% endblock %}

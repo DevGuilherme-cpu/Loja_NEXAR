@@ -23,7 +23,9 @@ from .forms import (CATEGORIA_REPETIDA, EMAIL_REPETIDO, FRETE_GRATIS_ACIMA, Cada
                     ProdutoForm, calcular_frete, email_em_uso, uploads_habilitados)
 from .assistente import SUGESTOES, responder
 from .models import Categoria, ItemPedido, Pedido, Produto
-from .painel import CD, PERIODOS, entregas, resumo  # entregas/CD também desenham o rastreio do cliente
+from .grupos import CLIENTES, FUNCIONARIOS
+from .painel import (CD, PERIODOS, entregas, estoque, financas, ranking_clientes,  # entregas/CD: rastreio do cliente
+                     resumo)
 from .simulacao import simular_pedidos
 
 # produtos já com a categoria (JOIN)
@@ -386,6 +388,12 @@ class Entrar(LoginView):
         messages.success(self.request, f"Olá, {form.get_user().get_username()}! Você entrou na sua conta.")
         return super().form_valid(form)
 
+    def get_default_redirect_url(self):
+        # sem "next": a equipe vai direto para o painel; cliente continua indo para a loja
+        if self.request.user.is_staff:
+            return reverse("loja:painel_inicio")
+        return super().get_default_redirect_url()
+
 
 class Sair(LogoutView):
     # Padrão do Django: só aceita POST (GET devolve 405). Redireciona para LOGOUT_REDIRECT_URL.
@@ -488,11 +496,45 @@ def somente_staff(view):
     return wrapper
 
 
+def dias_escolhidos(request):
+    return int(request.GET["dias"]) if request.GET.get("dias") in {str(p) for p in PERIODOS} else 30
+
+
 @somente_staff
 def painel_inicio(request):
-    dias = int(request.GET["dias"]) if request.GET.get("dias") in {str(p) for p in PERIODOS} else 30
+    dias = dias_escolhidos(request)
     return render(request, "painel/inicio.html",
                   resumo(dias) | {"dias": dias, "periodos": PERIODOS, "sugestoes": SUGESTOES})
+
+
+@somente_staff
+def painel_financas(request):
+    dias = dias_escolhidos(request)
+    return render(request, "painel/financas.html", financas(dias) | {"dias": dias, "periodos": PERIODOS})
+
+
+@somente_staff
+def painel_clientes(request):
+    return render(request, "painel/clientes.html", {
+        "ranking": ranking_clientes(),
+        "total_clientes": User.objects.filter(groups__name=CLIENTES).count(),
+        "equipe": User.objects.filter(groups__name=FUNCIONARIOS).order_by("username"),
+    })
+
+
+@somente_staff
+@require_POST
+def painel_estoque_repor(request, id):
+    """Entrada de mercadoria: soma unidades ao estoque (UPDATE com F(): duas entradas juntas não se perdem)."""
+    produto = get_object_or_404(Produto, id=id)
+    quantidade = request.POST.get("quantidade", "").strip()
+    if not inteiro_ascii(quantidade) or not 1 <= int(quantidade) <= 999:
+        messages.error(request, "Informe de 1 a 999 unidades para repor.")
+    else:
+        Produto.objects.filter(id=produto.id).update(estoque=F("estoque") + int(quantidade))
+        produto.refresh_from_db(fields=["estoque"])
+        messages.success(request, f"Entrada de {quantidade} unidade(s) em “{produto.nome}”. Estoque agora: {produto.estoque}.")
+    return redirect(f"{reverse('loja:painel_produtos')}#produto-{produto.id}")
 
 
 @somente_staff
@@ -521,7 +563,7 @@ def painel_produtos(request):
     busca = request.GET.get("busca", "").strip()
     categoria = request.GET.get("categoria", "")
     return render(request, "painel/produtos.html",
-                  {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria})
+                  {"produtos": filtrar(busca, categoria), "busca": busca, "categoria": categoria} | estoque())
 
 
 def link_arquivo(arquivo):

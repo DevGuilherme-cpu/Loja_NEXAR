@@ -27,9 +27,11 @@
 
       <nav class="painel-menu" aria-label="Painel">
         <a href="{% url 'loja:painel_inicio' %}" {% if rota == 'painel_inicio' %}class="ativo" aria-current="page"{% endif %}>Visão geral</a>
-        <a href="{% url 'loja:painel_produtos' %}" {% if 'produto' in rota %}class="ativo" aria-current="page"{% endif %}>Produtos</a>
+        <a href="{% url 'loja:painel_financas' %}" {% if rota == 'painel_financas' %}class="ativo" aria-current="page"{% endif %}>Finanças</a>
+        <a href="{% url 'loja:painel_produtos' %}" {% if 'produto' in rota %}class="ativo" aria-current="page"{% endif %}>Estoque</a>
         <a href="{% url 'loja:painel_categorias' %}" {% if 'categoria' in rota %}class="ativo" aria-current="page"{% endif %}>Categorias</a>
         <a href="{% url 'loja:painel_pedidos' %}" {% if 'pedido' in rota %}class="ativo" aria-current="page"{% endif %}>Pedidos</a>
+        <a href="{% url 'loja:painel_clientes' %}" {% if rota == 'painel_clientes' %}class="ativo" aria-current="page"{% endif %}>Clientes</a>
       </nav>
 
       <div class="painel-conta">

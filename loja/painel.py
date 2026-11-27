@@ -141,3 +141,95 @@ def resumo(dias=30):
         "estoque_baixo": Produto.objects.filter(estoque__lte=ESTOQUE_BAIXO).order_by("estoque", "nome")[:6],
         "ultimos": Pedido.objects.select_related("usuario").prefetch_related("itens__produto")[:5],
     }
+
+
+def pedidos_de(inicio=None, fim=None):
+    """Pedidos do período, com as peças (para total e frete de cada compra)."""
+    qs = Pedido.objects.select_related("usuario").prefetch_related("itens")
+    if inicio:
+        qs = qs.filter(data__gte=inicio)
+    if fim:
+        qs = qs.filter(data__lt=fim)
+    return list(qs)
+
+
+MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+
+
+def financas(dias=30):
+    """Página Finanças: quanto entrou (peças + frete), por forma de pagamento e mês a mês."""
+    hoje = timezone.localdate()
+    inicio = inicio_do_dia(hoje - timedelta(days=dias - 1))
+
+    def somar(pedidos):
+        pecas = sum((p.total for p in pedidos), Decimal(0))
+        fretes = sum((p.frete for p in pedidos), Decimal(0))
+        n = len(pedidos)
+        return {"pecas": pecas, "fretes": fretes, "total": pecas + fretes, "n": n,
+                "ticket": (pecas + fretes) / n if n else Decimal(0)}
+
+    atuais = pedidos_de(inicio)
+    t, ant = somar(atuais), somar(pedidos_de(inicio - timedelta(days=dias), inicio))
+    kpis = [
+        {"nome": "Total recebido", "valor": reais(t["total"]), "var": variacao(t["total"], ant["total"])},
+        {"nome": "Venda de peças", "valor": reais(t["pecas"]), "var": variacao(t["pecas"], ant["pecas"])},
+        {"nome": "Fretes cobrados", "valor": reais(t["fretes"]), "var": variacao(t["fretes"], ant["fretes"])},
+        {"nome": "Ticket médio", "valor": reais(t["ticket"]), "var": variacao(t["ticket"], ant["ticket"])},
+    ]
+
+    rotulos = dict(Pedido.PAGAMENTOS)
+    por_pagamento, por_envio = defaultdict(Decimal), defaultdict(Decimal)
+    for p in atuais:
+        # pedidos sem checkout (painel, simulação, dados de exemplo) não têm forma de pagamento
+        por_pagamento[rotulos.get(p.pagamento, "Sem checkout")] += p.total_com_frete
+        por_envio[dict(Pedido.ENVIOS).get(p.envio, "Sem checkout")] += p.total_com_frete
+
+    # últimos 6 meses, do mais antigo para o atual
+    meses = []
+    ano, mes = hoje.year, hoje.month
+    for _ in range(6):
+        meses.insert(0, (ano, mes))
+        ano, mes = (ano - 1, 12) if mes == 1 else (ano, mes - 1)
+    por_mes = defaultdict(lambda: {"total": Decimal(0), "n": 0})
+    for p in pedidos_de(inicio_do_dia(hoje.replace(year=meses[0][0], month=meses[0][1], day=1))):
+        data = timezone.localdate(p.data)
+        por_mes[(data.year, data.month)]["total"] += p.total_com_frete
+        por_mes[(data.year, data.month)]["n"] += 1
+    maior = max((por_mes[m]["total"] for m in meses), default=0) or 1
+    mensal = [{"nome": f"{MESES[m - 1]}/{a % 100:02d}", "pedidos": por_mes[(a, m)]["n"],
+               "texto": reais(por_mes[(a, m)]["total"]), "pct": round(por_mes[(a, m)]["total"] / maior * 100)}
+              for a, m in meses]
+
+    return {"kpis": kpis, "total_periodo": reais(t["total"]), "pedidos_periodo": t["n"],
+            "por_pagamento": barras(por_pagamento, reais), "por_envio": barras(por_envio, reais), "mensal": mensal}
+
+
+def estoque():
+    """Resumo da página Estoque: peças guardadas, quanto valem a preço de venda e o que precisa repor."""
+    produtos = list(Produto.objects.all())
+    return {
+        "estoque_pecas": sum(p.estoque for p in produtos),
+        "estoque_valor": reais(sum((p.preco * p.estoque for p in produtos), Decimal(0))),
+        "estoque_esgotados": sum(1 for p in produtos if p.estoque == 0),
+        "estoque_baixo": sum(1 for p in produtos if 0 < p.estoque <= ESTOQUE_BAIXO),
+        "estoque_limite": ESTOQUE_BAIXO,
+    }
+
+
+def ranking_clientes():
+    """Quem mais compra, do maior gasto para o menor. Visitante (sem conta) conta pelo e-mail."""
+    # shortcut: soma em Python todos os pedidos; com milhares de pedidos, trocar por aggregate no banco
+    clientes = {}
+    for p in Pedido.objects.select_related("usuario").prefetch_related("itens").order_by("data"):
+        chave = ("conta", p.usuario_id) if p.usuario_id else ("visitante", p.entrega_email or p.entrega_nome)
+        c = clientes.setdefault(chave, {"nome": p.cliente, "conta": bool(p.usuario_id),
+                                        "equipe": bool(p.usuario_id and p.usuario.is_staff),
+                                        "pedidos": 0, "pecas": 0, "total": Decimal(0)})
+        c["pedidos"] += 1
+        c["pecas"] += p.quantidade
+        c["total"] += p.total_com_frete
+        c["ultimo"] = p.data  # order_by("data"): o último que passar é o mais recente
+    lista = sorted(clientes.values(), key=lambda c: c["total"], reverse=True)
+    for posicao, c in enumerate(lista, 1):
+        c["posicao"], c["texto"] = posicao, reais(c["total"])
+    return lista
