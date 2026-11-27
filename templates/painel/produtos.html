@@ -1,12 +1,12 @@
 {% extends "painel/base_painel.html" %}
 {% load static %}
 
-{% block titulo %}Produtos — Painel NEXAR{% endblock %}
+{% block titulo %}Estoque — Painel NEXAR{% endblock %}
 
 {% block painel %}
 <div class="painel-topo">
   <div>
-    <h1>Produtos</h1>
+    <h1>Estoque</h1>
     <p class="contador">{{ produtos|length }} produto{{ produtos|length|pluralize }}{% if busca %} para "{{ busca }}"{% endif %}</p>
   </div>
   <div class="painel-topo-acoes">
@@ -19,6 +19,29 @@
   </div>
 </div>
 
+<section class="kpis" aria-label="Resumo do estoque">
+  <article class="cartao kpi">
+    <h2>Peças guardadas</h2>
+    <p class="kpi-valor">{{ estoque_pecas }}</p>
+    <p class="kpi-var">Soma do estoque de todos os produtos</p>
+  </article>
+  <article class="cartao kpi">
+    <h2>Valor em estoque</h2>
+    <p class="kpi-valor">{{ estoque_valor }}</p>
+    <p class="kpi-var">Preço de venda × unidades</p>
+  </article>
+  <article class="cartao kpi">
+    <h2>Acabando</h2>
+    <p class="kpi-valor">{{ estoque_baixo }}</p>
+    <p class="kpi-var">Com {{ estoque_limite }} unidades ou menos</p>
+  </article>
+  <article class="cartao kpi">
+    <h2>Esgotados</h2>
+    <p class="kpi-valor">{{ estoque_esgotados }}</p>
+    <p class="kpi-var">Fora de venda até repor</p>
+  </article>
+</section>
+
 <nav class="chips filtro-painel" aria-label="Filtrar por categoria">
   <a class="chip{% if not categoria %} ativo{% endif %}" href="?busca={{ busca|urlencode }}">Todas</a>
   {% for c in categorias %}
@@ -28,7 +51,7 @@
 
 <div class="grade-painel">
   {% for p in produtos %}
-    <article class="card item-produto">
+    <article class="card item-produto" id="produto-{{ p.id }}">
       <a class="card-img" href="{% url 'loja:painel_produto_editar' p.id %}" aria-label="Editar {{ p.nome }}">
         {% if p.imagem %}
           <img src="{{ p.imagem.url }}" alt="" loading="lazy">
@@ -49,6 +72,12 @@
           <span>{% if p.estoque == 0 %}Esgotado{% else %}{{ p.estoque }} em estoque{% endif %}</span>
           <span class="item-estoque-trilho" aria-hidden="true"><span style="--pct: {% widthratio p.estoque 20 100 %}%"></span></span>
         </div>
+        <form class="repor" method="post" action="{% url 'loja:painel_estoque_repor' p.id %}">
+          {% csrf_token %}
+          <label for="repor-{{ p.id }}">Entrada</label>
+          <input id="repor-{{ p.id }}" type="number" name="quantidade" min="1" max="999" value="10" inputmode="numeric">
+          <button class="btn-sm" type="submit">Repor<span class="sr"> {{ p.nome }}</span></button>
+        </form>
       </div>
 
       <div class="acoes">

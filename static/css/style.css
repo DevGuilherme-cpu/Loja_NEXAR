@@ -4726,3 +4726,32 @@ html.a11y-links a {
       "qtd tirar";
   }
 }
+
+/* painel: entrada de estoque no card do produto (templates/painel/produtos.html) */
+.repor {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .6rem;
+  font-size: var(--t-1);
+  font-weight: 600;
+}
+
+.repor input {
+  width: 4.5rem;
+  min-height: 36px;
+  padding: .3rem .5rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-pequeno);
+  font: inherit;
+}
+
+.repor .btn-sm {
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+/* painel: top 3 do ranking de clientes */
+.tabela tr.destaque td {
+  font-weight: 700;
+}
